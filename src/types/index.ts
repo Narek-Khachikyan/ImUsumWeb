@@ -20,3 +20,30 @@ export interface BlogPost {
   date: string;
   hot: boolean;
 }
+
+// Documentation page types
+export interface DocumentationItem {
+  id: number;
+  title: string;
+  description: string;
+  iconName: string;
+}
+
+export interface BudgetSubItem {
+  name: string;
+  amount: number;
+}
+
+export interface BudgetDetail {
+  name: string;
+  amount: number;
+  subItems?: BudgetSubItem[];
+}
+
+export interface BudgetCategory {
+  id: number;
+  category: string;
+  amount: number;
+  percentage: number;
+  details: BudgetDetail[];
+}
