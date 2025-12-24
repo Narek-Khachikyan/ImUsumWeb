@@ -1,7 +1,7 @@
-import findUsPhone from '../../../assets/findUsPhones.png';
-import googlePlay from '../../../assets/googlePlay.webp';
-import appStore from '../../../assets/appStore.webp';
-import Title from '../../StyleComponents/Title';
+import findUsPhone from '../../../../assets/findUsPhones.png';
+import googlePlay from '../../../../assets/googlePlay.webp';
+import appStore from '../../../../assets/appStore.webp';
+import Title from '../../../../components/ui/Title';
 
 const FindUsSection = () => {
    return (

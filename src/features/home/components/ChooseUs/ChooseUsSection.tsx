@@ -1,6 +1,6 @@
-import Title from '../../StyleComponents/Title';
+import Title from '../../../../components/ui/Title';
 import ChooseUsCard from './ChooseUsCard';
-import { chooseUsCardData } from '../../../data/data';
+import { chooseUsCardData } from '../../constants';
 
 const ChooseUsSection = () => {
    return (

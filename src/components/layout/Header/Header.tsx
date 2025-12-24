@@ -1,5 +1,5 @@
 import cn from 'classnames';
-import logo from '../../assets/logo.svg';
+import logo from '../../../assets/logo.svg';
 import { Link, useLocation } from 'react-router-dom';
 
 const Header = () => {

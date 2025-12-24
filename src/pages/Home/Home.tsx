@@ -1,7 +1,9 @@
-import ChooseUsSection from '../../components/HomeComponents/ChooseUs/ChooseUsSection';
-import FindUsSection from '../../components/HomeComponents/FindUs/FindUsSection';
-import MainSection from '../../components/HomeComponents/Main/MainSection';
-import PartnersSection from '../../components/HomeComponents/Partners/PartnersSection';
+import {
+   ChooseUsSection,
+   FindUsSection,
+   MainSection,
+   PartnersSection,
+} from '../../features/home';
 
 const Home = () => {
    return (
