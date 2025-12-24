@@ -1,38 +1,43 @@
 import cn from 'classnames';
-import styles from './header.module.css';
 import logo from '../../assets/logo.svg';
 import { Link, useLocation } from 'react-router-dom';
 
 const Header = () => {
    const location = useLocation();
    return (
-      <header className={cn(styles.header, 'bg-blue-main')}>
-         <div className={cn(styles.container)}>
-            <div
-               className={cn(styles.content, 'flex justify-between items-center py-6 font-medium')}>
+      <header className="bg-blue-main">
+         <div className="max-w-[1240px] mx-auto px-[15px]">
+            <div className="flex justify-between items-center py-6 font-medium">
                <img src={logo} alt="header-logo" />
-               <nav className={cn(styles.navigation)}>
-                  <ul className={cn(styles.navList, 'flex items-center gap-4 text-white ')}>
-                     <li className={cn(styles.navItem)}>
+               <nav>
+                  <ul className="flex items-center gap-4 text-white">
+                     <li>
                         <Link
-                           className={location.pathname === '/' ? styles.activeLink : styles.link}
+                           className={cn(
+                              'py-3 px-3 rounded-[10px] transition-all duration-300 ease-in-out font-medium',
+                              location.pathname === '/'
+                                 ? 'bg-white text-blue-main'
+                                 : 'hover:bg-white hover:text-blue-main'
+                           )}
                            to={'/'}>
                            Home
                         </Link>
                      </li>
-                     <li className={cn(styles.navItem)}>
+                     <li>
                         <Link
-                           className={
-                              location.pathname === '/documentation' ? styles.activeLink : styles.link
-                           }
+                           className={cn(
+                              'py-3 px-3 rounded-[10px] transition-all duration-300 ease-in-out font-medium',
+                              location.pathname === '/documentation'
+                                 ? 'bg-white text-blue-main'
+                                 : 'hover:bg-white hover:text-blue-main'
+                           )}
                            to={'/documentation'}>
                            Documentation
                         </Link>
                      </li>
                   </ul>
                </nav>
-               <button
-                  className={cn(styles.button, 'py-1 px-7 text-blue-main bg-white rounded-xl')}>
+               <button className="py-1 px-7 text-blue-main bg-white rounded-xl">
                   Sign In
                </button>
             </div>

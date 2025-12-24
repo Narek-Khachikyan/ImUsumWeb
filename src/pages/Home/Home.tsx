@@ -2,13 +2,11 @@ import ChooseUsSection from '../../components/HomeComponents/ChooseUs/ChooseUsSe
 import FindUsSection from '../../components/HomeComponents/FindUs/FindUsSection';
 import MainSection from '../../components/HomeComponents/Main/MainSection';
 import PartnersSection from '../../components/HomeComponents/Partners/PartnersSection';
-import styles from './home.module.css';
-import cn from 'classnames';
 
 const Home = () => {
    return (
-      <div className={cn(styles.home, 'py-12')}>
-         <div className={styles.content}>
+      <div className="py-12">
+         <div>
             <MainSection />
             <ChooseUsSection />
             <PartnersSection />

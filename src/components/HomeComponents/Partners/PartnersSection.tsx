@@ -8,14 +8,12 @@ import PartnersCard from './PartnersCard';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-import cn from 'classnames';
-import styles from './partners.module.css';
 
 const PartnersSection = () => {
    return (
-      <section className={cn(styles.partners, 'mb-24')}>
+      <section className="mb-24">
          <Title text="Partners" />
-         <div className={cn(styles.content)}>
+         <div>
             <Swiper
                spaceBetween={50}
                slidesPerView={3}
