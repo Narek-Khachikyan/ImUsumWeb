@@ -2,15 +2,16 @@
 //IMG-in Jamanakavor dzeva, minchev chgna sax backend!!!
 //IMG-in Jamanakavor dzeva, minchev chgna sax backend!!!
 
-import img from "../assets/choosUsCardImg1.png"
-import nike from "../assets/nikeLogo.png"
-import coffeHouse from "../assets/coffeHouseLogo.png"
-import blogImg1 from "../assets/blogImg1.webp"
-import blogImg2 from "../assets/blogImg2.webp"
-import blogImg3 from "../assets/blogImg3.webp"
+import type { ChooseUsCard, Partner, BlogPost } from "../types";
+import img from "../assets/choosUsCardImg1.png";
+import nike from "../assets/nikeLogo.png";
+import coffeHouse from "../assets/coffeHouseLogo.png";
+import blogImg1 from "../assets/blogImg1.webp";
+import blogImg2 from "../assets/blogImg2.webp";
+import blogImg3 from "../assets/blogImg3.webp";
 
 
-export const chooseUsCardData = [
+export const chooseUsCardData: ChooseUsCard[] = [
   {
      id:1,
      text: "We have Ideas",
@@ -54,7 +55,7 @@ export const chooseUsCardData = [
 },
 ]
 
-export const partners = [
+export const partners: Partner[] = [
   {
     id:7,
     image:nike
@@ -86,7 +87,7 @@ export const partners = [
   }
 ]
 
-export const blog = [
+export const blog: BlogPost[] = [
   {
     id:14,
     image:blogImg1,

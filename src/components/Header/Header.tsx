@@ -5,7 +5,6 @@ import { Link, useLocation } from 'react-router-dom';
 
 const Header = () => {
    const location = useLocation();
-   console.log(location.pathname);
    return (
       <header className={cn(styles.header, 'bg-blue-main')}>
          <div className={cn(styles.container)}>
@@ -24,7 +23,7 @@ const Header = () => {
                      <li className={cn(styles.navItem)}>
                         <Link
                            className={
-                              location.pathname === '/doc' ? styles.activeLink : styles.link
+                              location.pathname === '/documentation' ? styles.activeLink : styles.link
                            }
                            to={'/documentation'}>
                            Documentation

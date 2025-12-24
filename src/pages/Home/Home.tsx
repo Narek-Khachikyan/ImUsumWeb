@@ -1,7 +1,7 @@
-import ChooseUsSection from '../../components/HomeComponetns/ChooseUs/ChooseUsSection';
-import FindUsSection from '../../components/HomeComponetns/FindUs/FindUsSection';
-import MainSection from '../../components/HomeComponetns/Main/MainSection';
-import PartnersSection from '../../components/HomeComponetns/Partners/PartnersSection';
+import ChooseUsSection from '../../components/HomeComponents/ChooseUs/ChooseUsSection';
+import FindUsSection from '../../components/HomeComponents/FindUs/FindUsSection';
+import MainSection from '../../components/HomeComponents/Main/MainSection';
+import PartnersSection from '../../components/HomeComponents/Partners/PartnersSection';
 import styles from './home.module.css';
 import cn from 'classnames';
 
