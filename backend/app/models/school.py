@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.orm import relationship
 
 from .base import Base, TimestampMixin
@@ -29,7 +29,7 @@ class Class(Base, TimestampMixin):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     grade_level = Column(Integer, nullable=False)
-    school_id = Column(Integer, nullable=False)
+    school_id = Column(Integer, ForeignKey("schools.id"), nullable=False)
 
     # Relationships
     school = relationship("School", back_populates="classes")

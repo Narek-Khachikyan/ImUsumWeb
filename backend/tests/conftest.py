@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
-from app.database import get_db
+from app.api.deps import get_db
 from app.models.base import Base
 from app.models.user import User, UserRole
 from app.core.security import get_password_hash
@@ -46,7 +46,9 @@ def db() -> Generator[Session, None, None]:
 @pytest.fixture(scope="function")
 def client(db: Session) -> Generator[TestClient, None, None]:
     """Create a test client with database override."""
-    app.dependency_overrides[get_db] = lambda: db
+    def override_get_db():
+        yield db
+    app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
