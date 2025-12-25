@@ -9,7 +9,9 @@ from app.core.security import (
     create_refresh_token,
     decode_token,
 )
-from app.models.user import User
+from app.models.user import User, UserRole
+from app.models.student import StudentProfile
+from app.models.teacher import TeacherProfile
 from app.schemas.auth import LoginRequest, TokenResponse, RefreshTokenRequest
 from app.schemas.user import UserCreate, UserRead, UserWithToken
 
@@ -42,6 +44,16 @@ async def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
+    # Create role-specific profile
+    if user.role == UserRole.STUDENT:
+        student_profile = StudentProfile(user_id=user.id)
+        db.add(student_profile)
+        db.commit()
+    elif user.role == UserRole.TEACHER:
+        teacher_profile = TeacherProfile(user_id=user.id)
+        db.add(teacher_profile)
+        db.commit()
+
     # Generate tokens
     access_token = create_access_token(data={"sub": str(user.id)})
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
@@ -71,6 +83,28 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User account is inactive",
         )
+
+    # Ensure role-specific profile exists (for users registered before this fix)
+    if user.role == UserRole.STUDENT:
+        existing_profile = (
+            db.query(StudentProfile)
+            .filter(StudentProfile.user_id == user.id)
+            .first()
+        )
+        if not existing_profile:
+            student_profile = StudentProfile(user_id=user.id)
+            db.add(student_profile)
+            db.commit()
+    elif user.role == UserRole.TEACHER:
+        existing_profile = (
+            db.query(TeacherProfile)
+            .filter(TeacherProfile.user_id == user.id)
+            .first()
+        )
+        if not existing_profile:
+            teacher_profile = TeacherProfile(user_id=user.id)
+            db.add(teacher_profile)
+            db.commit()
 
     # Generate tokens
     access_token = create_access_token(data={"sub": str(user.id)})

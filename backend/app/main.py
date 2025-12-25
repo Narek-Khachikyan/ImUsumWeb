@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+import traceback
 
 from app.config import settings
 from app.api.v1.router import api_router
@@ -10,7 +12,10 @@ from app.database import engine
 from app.models.base import Base
 
 # Create database tables
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    print(f"Warning: Could not create database tables: {e}")
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -39,6 +44,19 @@ app.add_middleware(
 
 # Include API router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
+
+# Global exception handler to ensure CORS headers are always sent
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Handle all unhandled exceptions with CORS headers."""
+    print(f"Unhandled exception: {exc}")
+    print(traceback.format_exc())
+
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+    )
 
 
 @app.get("/health")

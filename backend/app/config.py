@@ -1,5 +1,7 @@
-from typing import List
+from typing import List, Union
+import json
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 
 
 class Settings(BaseSettings):
@@ -25,6 +27,17 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:5173",
     ]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        """Parse CORS_ORIGINS from JSON string or list."""
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return [origin.strip() for origin in v.split(",")]
+        return v
 
     # OpenAI
     OPENAI_API_KEY: str = ""
