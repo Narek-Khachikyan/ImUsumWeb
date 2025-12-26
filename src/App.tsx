@@ -19,6 +19,8 @@ const AssignmentsPage = lazy(() => import('./pages/Dashboard/AssignmentsPage'));
 const GradesPage = lazy(() => import('./pages/Dashboard/GradesPage'));
 const ProfilePage = lazy(() => import('./pages/Dashboard/ProfilePage'));
 const UsersPage = lazy(() => import('./pages/Dashboard/UsersPage'));
+const OffersPage = lazy(() => import('./pages/Dashboard/Offers/OffersPage'));
+const MyPurchasesPage = lazy(() => import('./pages/Dashboard/Offers/MyPurchasesPage'));
 
 // Loading component
 const PageLoader = () => (
@@ -133,6 +135,24 @@ function App() {
             <Suspense fallback={<PageLoader />}>
               <ProfilePage />
             </Suspense>
+          }
+        />
+        <Route
+          path="offers"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <OffersPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="my-purchases"
+          element={
+            <ProtectedRoute allowedRoles={['student']}>
+              <Suspense fallback={<PageLoader />}>
+                <MyPurchasesPage />
+              </Suspense>
+            </ProtectedRoute>
           }
         />
       </Route>

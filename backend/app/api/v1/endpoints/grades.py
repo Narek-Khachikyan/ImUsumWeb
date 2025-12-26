@@ -119,6 +119,38 @@ async def get_grade_summary(
     ]
 
 
+# Bonus points thresholds: percentage -> bonus points
+GRADE_BONUS_THRESHOLDS = {
+    90: 10,  # 90%+ = 10 bonus points
+    80: 5,   # 80-89% = 5 bonus points
+    70: 2,   # 70-79% = 2 bonus points
+}
+
+
+def _award_bonus_points(
+    db: Session, student_id: int, grade_value: float, max_value: float
+) -> int:
+    """Calculate and award bonus points based on grade percentage."""
+    if max_value <= 0:
+        return 0
+
+    percentage = (grade_value / max_value) * 100
+
+    for threshold, points in sorted(GRADE_BONUS_THRESHOLDS.items(), reverse=True):
+        if percentage >= threshold:
+            student = (
+                db.query(StudentProfile)
+                .filter(StudentProfile.id == student_id)
+                .first()
+            )
+            if student:
+                student.bonus_points = (student.bonus_points or 0) + points
+                db.commit()
+                return points
+            break
+    return 0
+
+
 @router.post("", response_model=GradeRead, status_code=status.HTTP_201_CREATED)
 async def create_grade(
     grade_in: GradeCreate,
@@ -144,6 +176,15 @@ async def create_grade(
     db.add(grade)
     db.commit()
     db.refresh(grade)
+
+    # Award bonus points for good grades
+    _award_bonus_points(
+        db,
+        student_id=grade.student_id,
+        grade_value=grade.grade_value,
+        max_value=grade.max_value,
+    )
+
     return grade
 
 

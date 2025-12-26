@@ -23,3 +23,4 @@ class StudentProfile(Base, TimestampMixin):
     assignment_submissions = relationship(
         "AssignmentSubmission", back_populates="student"
     )
+    purchases = relationship("Purchase", back_populates="student")

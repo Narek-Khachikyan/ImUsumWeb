@@ -9,6 +9,8 @@ from .assignment import Assignment, AssignmentSubmission, AssignmentType
 from .grade import Grade
 from .blog import BlogPost
 from .partner import Partner
+from .offer import Offer, OfferCategory
+from .purchase import Purchase, PurchaseStatus
 
 __all__ = [
     "Base",
@@ -29,4 +31,8 @@ __all__ = [
     "Grade",
     "BlogPost",
     "Partner",
+    "Offer",
+    "OfferCategory",
+    "Purchase",
+    "PurchaseStatus",
 ]
