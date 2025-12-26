@@ -18,6 +18,7 @@ import {
   getTodayKey,
   groupScheduleByDay,
   isNowWithinRange,
+  isNowWithinTimeRange,
 } from './student-home/utils';
 import NotificationBell from './student-home/components/NotificationBell';
 import QuickActionButton from './student-home/components/QuickActionButton';
@@ -68,7 +69,10 @@ export default function StudentHomePage() {
   const timetableDays = useMemo<TimetableDay[]>(() => {
     return weekDays.map((day) => {
       const lessons: LessonItem[] = shouldUseSampleLessons
-        ? sampleLessonsByDay[day.key]
+        ? (sampleLessonsByDay[day.key] ?? []).map((lesson) => ({
+            ...lesson,
+            isActive: day.key === todayKey && isNowWithinTimeRange(lesson.time),
+          }))
         : (scheduleByDay[day.key] ?? []).map((lesson, index) => {
             const summaryItem = summaryBySubject.get(lesson.subject_id);
             const gradeValue = formatGradeBadge(summaryItem?.average);

@@ -22,10 +22,10 @@ const LessonCard = ({ lesson, isSelected, onClick }: LessonCardProps) => {
       whileHover={{ y: -4, scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       onClick={handleClick}
-      className={`group w-full rounded-xl border p-4 text-left transition-colors transform-gpu ${
+      className={`group w-full rounded-xl border-2 border-solid p-4 text-left transition-colors transform-gpu ${
         isHighlighted
-          ? 'border-blue-main bg-blue-main text-white shadow-[0_0_60px_rgba(0,0,0,0.2)]'
-          : 'border-blue-main bg-white text-slate-900 hover:border-blue-main hover:bg-blue-main hover:text-white hover:shadow-[0_0_60px_rgba(0,0,0,0.2)]'
+          ? 'border-[#1C5CFD] bg-blue-main text-white shadow-[0_0_60px_rgba(0,0,0,0.2)]'
+          : 'border-[#1C5CFD] bg-white text-slate-900 hover:bg-blue-main hover:text-white hover:shadow-[0_0_60px_rgba(0,0,0,0.2)]'
       }`}
     >
       <div className="flex items-start justify-between">
@@ -60,11 +60,11 @@ const LessonCard = ({ lesson, isSelected, onClick }: LessonCardProps) => {
         )}
         {lesson.grade && (
           <div
-            className={`flex h-9 w-9 items-center justify-center rounded-full border text-[30px] font-bold leading-none transition-all ${
+            className={`flex h-9 w-9 items-center justify-center text-[30px] font-bold leading-none transition-all ${
               isHighlighted
-                ? 'border-transparent opacity-0 scale-90'
-                : 'border-blue-main text-blue-main'
-            } group-hover:border-transparent group-hover:opacity-0 group-hover:scale-90`}
+                ? 'text-white'
+                : 'text-blue-main'
+            } group-hover:text-white`}
           >
             {lesson.grade}
           </div>

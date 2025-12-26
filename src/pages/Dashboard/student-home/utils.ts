@@ -51,6 +51,22 @@ export const isNowWithinRange = (start: string, end: string, now = new Date()): 
   return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
 };
 
+export const parseTimeRange = (timeRange: string): { start: string; end: string } | null => {
+  const parts = timeRange.split('–');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return null;
+  }
+  return { start: parts[0].trim(), end: parts[1].trim() };
+};
+
+export const isNowWithinTimeRange = (timeRange: string, now = new Date()): boolean => {
+  const parsed = parseTimeRange(timeRange);
+  if (!parsed) {
+    return false;
+  }
+  return isNowWithinRange(parsed.start, parsed.end, now);
+};
+
 export const groupScheduleByDay = (schedule: Schedule[]): Record<WeekDayKey, Schedule[]> => {
   const grouped: Record<WeekDayKey, Schedule[]> = {
     monday: [],

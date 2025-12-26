@@ -104,7 +104,6 @@ export const sampleLessonsByDay: Record<WeekDayKey, LessonItem[]> = {
       detail: 'Վարժություն 4-9, էջ 78',
       grade: '8',
       order: 2,
-      isActive: true,
     },
     {
       id: 'monday-3',
@@ -167,6 +166,14 @@ export const sampleLessonsByDay: Record<WeekDayKey, LessonItem[]> = {
       detail: 'Համեմատական շարադրանք',
       grade: '7',
       order: 2,
+    },
+    {
+      id: 'thursday-3',
+      title: 'Մաdelays( Delays Delays)',
+      time: '12:30–13:30',
+      detail: 'Delays #5',
+      grade: '8',
+      order: 3,
     },
   ],
   friday: [

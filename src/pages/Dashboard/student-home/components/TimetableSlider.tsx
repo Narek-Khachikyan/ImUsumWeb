@@ -53,7 +53,7 @@ const TimetableSlider = ({ days, isLoading, onLessonClick }: TimetableSliderProp
   }
 
   return (
-    <div className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
+    <div className="rounded-2xl border border-blue-100 bg-white p-8 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-wrap gap-2">
           {days.map((day, index) => (
@@ -102,7 +102,7 @@ const TimetableSlider = ({ days, isLoading, onLessonClick }: TimetableSliderProp
                     </span>
                   )}
                 </div>
-                <div className="grid gap-4">
+                <div className="grid gap-5">
                   <AnimatePresence mode="popLayout">
                     {day.lessons.length > 0 ? (
                       day.lessons.map((lesson) => (
