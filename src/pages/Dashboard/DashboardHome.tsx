@@ -3,22 +3,29 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { fetchMySchedule } from '@/app/slices/scheduleSlice';
 import { fetchMyAssignments } from '@/app/slices/assignmentSlice';
-import { fetchGradeSummary } from '@/app/slices/gradeSlice';
+import StudentHomePage from './StudentHomePage';
 
 export default function DashboardHome() {
+   const { user } = useAuth();
+
+   // For students, show the new StudentHomePage design
+   if (user?.role === 'student') {
+      return <StudentHomePage />;
+   }
+
+   return <TeacherDirectorDashboard />;
+}
+
+function TeacherDirectorDashboard() {
    const { user } = useAuth();
    const dispatch = useAppDispatch();
    const { mySchedule } = useAppSelector((state) => state.schedule);
    const { myAssignments } = useAppSelector((state) => state.assignment);
-   const { summary } = useAppSelector((state) => state.grade);
 
    useEffect(() => {
       dispatch(fetchMySchedule());
       dispatch(fetchMyAssignments());
-      if (user?.role === 'student') {
-         dispatch(fetchGradeSummary());
-      }
-   }, [dispatch, user?.role]);
+   }, [dispatch]);
 
    const todaySchedule = mySchedule.filter((s) => {
       const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -30,8 +37,6 @@ export default function DashboardHome() {
       .filter((a) => new Date(a.due_date) > new Date())
       .slice(0, 5);
 
-   const averageGrade =
-      summary.length > 0 ? summary.reduce((acc, s) => acc + s.average, 0) / summary.length : 0;
 
    return (
       <div className="space-y-6">
@@ -39,8 +44,6 @@ export default function DashboardHome() {
          <div className="bg-gradient-to-r from-blue-main to-blue-dark rounded-2xl p-6 text-white">
             <h2 className="text-2xl font-bold">Բարի գալուստ, {user?.first_name}!</h2>
             <p className="mt-2 text-blue-100">
-               {user?.role === 'student' &&
-                  'Հետևեք ձեր դասացուցակին, առաջադրանքներին եվ գնահատականներին'}
                {user?.role === 'teacher' &&
                   'Կառավարեք աշակերտների առաջադրանքները եվ գնահատականները'}
                {user?.role === 'director' && 'Կառավարեք դպրոցը, դասացուցակը եվ անձնակազմը'}
@@ -99,33 +102,6 @@ export default function DashboardHome() {
                </div>
             </div>
 
-            {user?.role === 'student' && (
-               <div className="bg-white rounded-xl shadow-soft p-6">
-                  <div className="flex items-center">
-                     <div className="p-3 bg-green-100 rounded-lg">
-                        <svg
-                           className="w-6 h-6 text-green-600"
-                           fill="none"
-                           stroke="currentColor"
-                           viewBox="0 0 24 24"
-                        >
-                           <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                           />
-                        </svg>
-                     </div>
-                     <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-500">Միջին գնահատական</p>
-                        <p className="text-2xl font-bold text-gray-900">
-                           {averageGrade > 0 ? averageGrade.toFixed(1) : '-'}
-                        </p>
-                     </div>
-                  </div>
-               </div>
-            )}
          </div>
 
          {/* Today's schedule */}
