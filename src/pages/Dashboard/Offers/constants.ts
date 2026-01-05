@@ -37,6 +37,12 @@ export const offersCopy = {
       showQR: 'Ցուցադրել QR',
       done: 'Լավ',
    },
+   errors: {
+      title: 'Գործարքը ձախողվեց',
+      insufficientBalance: 'Անբավարար միավորներ',
+      generic: 'Չհաջողվեց կատարել գնումը։ Խնդրում ենք փորձել կրկին։',
+      close: 'Փակել',
+   },
    purchases: {
       title: 'Իմ գնումները',
       empty: 'Դուք դեռ գնումներ չունեք:',

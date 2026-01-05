@@ -3,6 +3,7 @@
  */
 
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import axios from 'axios';
 import { offersService } from '@/services/offersService';
 import type {
    Offer,
@@ -84,6 +85,12 @@ export const purchaseOffer = createAsyncThunk(
       try {
          return await offersService.purchase(offerId);
       } catch (error) {
+         if (axios.isAxiosError(error)) {
+            const detail = error.response?.data?.detail;
+            if (typeof detail === 'string') {
+               return rejectWithValue(detail);
+            }
+         }
          if (error instanceof Error) {
             return rejectWithValue(error.message);
          }

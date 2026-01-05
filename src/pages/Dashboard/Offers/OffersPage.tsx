@@ -17,6 +17,7 @@ import OfferCard from './components/OfferCard';
 import BalanceDisplay from './components/BalanceDisplay';
 import ConfirmPurchaseModal from './components/ConfirmPurchaseModal';
 import PurchaseSuccessModal from './components/PurchaseSuccessModal';
+import PurchaseErrorModal from './components/PurchaseErrorModal';
 import { offersCopy } from './constants';
 
 const categories: Array<'all' | OfferCategory> = [
@@ -38,27 +39,50 @@ export default function OffersPage() {
       'all'
    );
    const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+   const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
    useEffect(() => {
-      dispatch(
-         fetchOffers(activeCategory === 'all' ? undefined : activeCategory)
-      );
+      dispatch(fetchOffers(undefined));
+   }, [dispatch]);
+
+   useEffect(() => {
       if (user?.role === 'student') {
          dispatch(fetchBalance());
       }
-   }, [dispatch, activeCategory, user?.role]);
+   }, [dispatch, user?.role]);
 
    const handlePurchase = useCallback(async () => {
       if (selectedOffer) {
-         await dispatch(purchaseOffer(selectedOffer.id));
-         setSelectedOffer(null);
+         try {
+            await dispatch(purchaseOffer(selectedOffer.id)).unwrap();
+            setPurchaseError(null);
+            setSelectedOffer(null);
+            dispatch(fetchBalance());
+         } catch (error) {
+            const message =
+               typeof error === 'string'
+                  ? error
+                  : error instanceof Error
+                    ? error.message
+                    : '';
+            const normalizedMessage = message.toLowerCase();
+            const resolvedMessage =
+               normalizedMessage.includes('insufficient') ||
+               normalizedMessage.includes('balance')
+                  ? offersCopy.errors.insufficientBalance
+                  : offersCopy.errors.generic;
+            setPurchaseError(resolvedMessage);
+            setSelectedOffer(null);
+         }
       }
    }, [dispatch, selectedOffer]);
 
    const filteredOffers =
       activeCategory === 'all'
          ? offers
-         : offers.filter((o) => o.category === activeCategory);
+         : offers.filter(
+              (o) => o.category.toLowerCase().trim() === activeCategory
+           );
 
    return (
       <div className="min-h-screen bg-neutral-50 pb-8">
@@ -130,7 +154,10 @@ export default function OffersPage() {
                         <StaggerItem key={offer.id}>
                            <OfferCard
                               offer={offer}
-                              onSelect={setSelectedOffer}
+                              onSelect={(nextOffer) => {
+                                 setPurchaseError(null);
+                                 setSelectedOffer(nextOffer);
+                              }}
                               canPurchase={
                                  user?.role === 'student' &&
                                  balance >= offer.price
@@ -156,6 +183,12 @@ export default function OffersPage() {
          <PurchaseSuccessModal
             purchase={lastPurchase}
             onClose={() => dispatch(clearLastPurchase())}
+         />
+
+         {/* Error modal */}
+         <PurchaseErrorModal
+            message={purchaseError}
+            onClose={() => setPurchaseError(null)}
          />
       </div>
    );
