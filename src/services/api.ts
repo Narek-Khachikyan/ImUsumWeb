@@ -1,5 +1,51 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
+type ApiErrorResponse =
+  | string
+  | {
+      detail?: unknown;
+      message?: unknown;
+      error?: unknown;
+    };
+
+function firstNonEmptyString(values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value;
+    }
+  }
+  return null;
+}
+
+export function getApiErrorMessage(error: unknown, fallback = 'Request failed'): string {
+  if (axios.isAxiosError(error)) {
+    const responseData = error.response?.data as ApiErrorResponse | undefined;
+
+    if (typeof responseData === 'string' && responseData.trim().length > 0) {
+      return responseData;
+    }
+
+    if (responseData && typeof responseData === 'object') {
+      const detail = firstNonEmptyString([
+        responseData.detail,
+        responseData.message,
+        responseData.error,
+      ]);
+      if (detail) {
+        return detail;
+      }
+    }
+
+    return error.message || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
+  return fallback;
+}
+
 // Create axios instance with default config
 const api: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',

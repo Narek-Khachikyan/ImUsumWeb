@@ -30,6 +30,7 @@ export async function requestPasswordReset(params: {
       expires_at: new Date(now.getTime() + env.RESET_PASSWORD_TOKEN_EXPIRE_MINUTES * 60 * 1000),
       requested_ip: params.requestedIp ?? null,
       requested_user_agent: params.requestedUserAgent ? params.requestedUserAgent.slice(0, 500) : null,
+      created_at: now,
     },
   });
 

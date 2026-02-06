@@ -112,6 +112,32 @@ describe('API parity', () => {
     vi.restoreAllMocks();
   });
 
+  it('register success -> 201 with lowercase role and tokens', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+    mockPrisma.user.create.mockResolvedValue(buildUser({ role: 'student', token_version: 0 }));
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/register',
+      payload: {
+        email: 'new-user@example.com',
+        password: 'pass123456',
+        first_name: 'New',
+        last_name: 'User',
+        role: 'student',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().user.role).toBe('student');
+    expect(response.json().access_token).toEqual(expect.any(String));
+    expect(response.json().refresh_token).toEqual(expect.any(String));
+    await app.close();
+  });
+
   it('register duplicate email -> 409', async () => {
     const app = buildApp();
     await app.ready();
@@ -171,6 +197,24 @@ describe('API parity', () => {
       method: 'POST',
       url: '/api/v1/auth/refresh',
       payload: { refresh_token: 'invalid-token' },
+    });
+
+    expect(response.statusCode).toBe(401);
+    expect(response.json().detail).toBe('Invalid refresh token');
+    await app.close();
+  });
+
+  it('refresh token version mismatch -> 401', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const refreshToken = app.jwt.sign({ sub: '1', type: 'refresh', ver: 0 }, { expiresIn: '7d' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ token_version: 2 }));
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/refresh',
+      payload: { refresh_token: refreshToken },
     });
 
     expect(response.statusCode).toBe(401);

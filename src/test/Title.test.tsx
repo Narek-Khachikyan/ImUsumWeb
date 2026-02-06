@@ -15,6 +15,6 @@ describe('Title Component', () => {
       render(<Title text="Styled Title" />);
       
       const heading = screen.getByRole('heading');
-      expect(heading).toHaveClass('text-blue-600', 'text-5xl', 'font-semibold');
+      expect(heading).toHaveClass('text-display-2', 'font-bold', 'text-neutral-800');
    });
 });

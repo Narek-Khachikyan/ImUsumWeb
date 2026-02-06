@@ -14,12 +14,13 @@ model User {
   first_name            String               @db.VarChar(100)
   last_name             String               @db.VarChar(100)
   role                  UserRole
-  is_active             Boolean?
-  is_verified           Boolean?
+  is_active             Boolean              @default(true)
+  is_verified           Boolean              @default(false)
+  token_version         Int                  @default(0)
   avatar_url            String?              @db.VarChar(500)
   phone                 String?              @db.VarChar(20)
   school_id             Int?
-  created_at            DateTime             @db.Timestamp(6)
+  created_at            DateTime             @default(now()) @db.Timestamp(6)
   updated_at            DateTime             @updatedAt @db.Timestamp(6)
   password_reset_tokens PasswordResetToken[]
   student_profile       StudentProfile?
@@ -69,7 +70,7 @@ model StudentProfile {
   student_id_number      String?                @unique @db.VarChar(50)
   gpa                    Float?
   bonus_points           Int?
-  created_at             DateTime               @db.Timestamp(6)
+  created_at             DateTime               @default(now()) @db.Timestamp(6)
   updated_at             DateTime               @updatedAt @db.Timestamp(6)
   assignment_submissions AssignmentSubmission[]
   grades                 Grade[]
@@ -86,7 +87,7 @@ model TeacherProfile {
   user_id     Int              @unique
   employee_id String?          @unique @db.VarChar(50)
   department  String?          @db.VarChar(100)
-  created_at  DateTime         @db.Timestamp(6)
+  created_at  DateTime         @default(now()) @db.Timestamp(6)
   updated_at  DateTime         @updatedAt @db.Timestamp(6)
   assignments Assignment[]
   grades      Grade[]
@@ -279,7 +280,7 @@ model PasswordResetToken {
   used_at              DateTime? @db.Timestamp(6)
   requested_ip         String?   @db.VarChar(45)
   requested_user_agent String?   @db.VarChar(500)
-  created_at           DateTime  @db.Timestamp(6)
+  created_at           DateTime  @default(now()) @db.Timestamp(6)
   updated_at           DateTime  @updatedAt @db.Timestamp(6)
   user                 User      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -295,10 +296,10 @@ model alembic_version {
 }
 
 enum UserRole {
-  STUDENT
-  TEACHER
-  DIRECTOR
-  ADMIN
+  student  @map("STUDENT")
+  teacher  @map("TEACHER")
+  director @map("DIRECTOR")
+  admin    @map("ADMIN")
 
   @@map("userrole")
 }

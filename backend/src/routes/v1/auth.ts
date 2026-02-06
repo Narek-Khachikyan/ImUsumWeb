@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import type { UserRole } from '@prisma/client';
 
 import { env } from '../../config/env.js';
 import { conflict, unauthorized, badRequest } from '../../lib/errors.js';
@@ -37,12 +38,13 @@ function createRefreshToken(fastify: any, userId: number, tokenVersion: number):
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post('/register', async (request, reply) => {
+    const now = new Date();
     const body = request.body as {
       email: string;
       password: string;
       first_name: string;
       last_name: string;
-      role?: 'student' | 'teacher' | 'director' | 'admin';
+      role?: UserRole;
       phone?: string;
       avatar_url?: string;
       school_id?: number;
@@ -60,16 +62,20 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
         first_name: body.first_name,
         last_name: body.last_name,
         role: body.role ?? 'student',
+        is_active: true,
+        is_verified: false,
+        token_version: 0,
         phone: body.phone ?? null,
         avatar_url: body.avatar_url ?? null,
         school_id: body.school_id ?? null,
+        created_at: now,
       },
     });
 
     if (user.role === 'student') {
-      await prisma.studentProfile.create({ data: { user_id: user.id } });
+      await prisma.studentProfile.create({ data: { user_id: user.id, created_at: now } });
     } else if (user.role === 'teacher') {
-      await prisma.teacherProfile.create({ data: { user_id: user.id } });
+      await prisma.teacherProfile.create({ data: { user_id: user.id, created_at: now } });
     }
 
     const access_token = createAccessToken(fastify, user.id, user.token_version);
@@ -100,12 +106,12 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
     if (user.role === 'student') {
       const profile = await prisma.studentProfile.findUnique({ where: { user_id: user.id } });
       if (!profile) {
-        await prisma.studentProfile.create({ data: { user_id: user.id } });
+        await prisma.studentProfile.create({ data: { user_id: user.id, created_at: new Date() } });
       }
     } else if (user.role === 'teacher') {
       const profile = await prisma.teacherProfile.findUnique({ where: { user_id: user.id } });
       if (!profile) {
-        await prisma.teacherProfile.create({ data: { user_id: user.id } });
+        await prisma.teacherProfile.create({ data: { user_id: user.id, created_at: new Date() } });
       }
     }
 

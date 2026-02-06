@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { authService } from '@/services/authService';
+import { getApiErrorMessage } from '@/services/api';
 import type { User, LoginRequest, RegisterRequest } from '@/types';
 
 interface AuthState {
@@ -24,10 +25,7 @@ export const login = createAsyncThunk(
       const response = await authService.login(credentials);
       return response.user;
     } catch (error) {
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue('Login failed');
+      return rejectWithValue(getApiErrorMessage(error, 'Login failed'));
     }
   }
 );
@@ -39,10 +37,7 @@ export const register = createAsyncThunk(
       const response = await authService.register(data);
       return response.user;
     } catch (error) {
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue('Registration failed');
+      return rejectWithValue(getApiErrorMessage(error, 'Registration failed'));
     }
   }
 );
@@ -55,10 +50,7 @@ export const fetchCurrentUser = createAsyncThunk(
       return user;
     } catch (error) {
       authService.clearTokens();
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue('Failed to fetch user');
+      return rejectWithValue(getApiErrorMessage(error, 'Failed to fetch user'));
     }
   }
 );
