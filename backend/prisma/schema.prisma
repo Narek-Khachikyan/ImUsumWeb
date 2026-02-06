@@ -1,0 +1,323 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    Int                  @id @default(autoincrement())
+  email                 String               @unique(map: "ix_users_email") @db.VarChar(255)
+  hashed_password       String               @db.VarChar(255)
+  first_name            String               @db.VarChar(100)
+  last_name             String               @db.VarChar(100)
+  role                  UserRole
+  is_active             Boolean?
+  is_verified           Boolean?
+  avatar_url            String?              @db.VarChar(500)
+  phone                 String?              @db.VarChar(20)
+  school_id             Int?
+  created_at            DateTime             @db.Timestamp(6)
+  updated_at            DateTime             @updatedAt @db.Timestamp(6)
+  password_reset_tokens PasswordResetToken[]
+  student_profile       StudentProfile?
+  teacher_profile       TeacherProfile?
+  school                School?              @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_users_id")
+  @@map("users")
+}
+
+model School {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(255)
+  address    String?  @db.VarChar(500)
+  latitude   Float?
+  longitude  Float?
+  phone      String?  @db.VarChar(20)
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @updatedAt @db.Timestamp(6)
+  classes    Class[]
+  users      User[]
+
+  @@index([id], map: "ix_schools_id")
+  @@map("schools")
+}
+
+model Class {
+  id          Int              @id @default(autoincrement())
+  name        String           @db.VarChar(100)
+  grade_level Int
+  school_id   Int
+  created_at  DateTime         @db.Timestamp(6)
+  updated_at  DateTime         @updatedAt @db.Timestamp(6)
+  assignments Assignment[]
+  school      School           @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  schedules   Schedule[]
+  students    StudentProfile[]
+
+  @@index([id], map: "ix_classes_id")
+  @@map("classes")
+}
+
+model StudentProfile {
+  id                     Int                    @id @default(autoincrement())
+  user_id                Int                    @unique
+  class_id               Int?
+  student_id_number      String?                @unique @db.VarChar(50)
+  gpa                    Float?
+  bonus_points           Int?
+  created_at             DateTime               @db.Timestamp(6)
+  updated_at             DateTime               @updatedAt @db.Timestamp(6)
+  assignment_submissions AssignmentSubmission[]
+  grades                 Grade[]
+  purchases              Purchase[]
+  class_                 Class?                 @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user                   User                   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_student_profiles_id")
+  @@map("student_profiles")
+}
+
+model TeacherProfile {
+  id          Int              @id @default(autoincrement())
+  user_id     Int              @unique
+  employee_id String?          @unique @db.VarChar(50)
+  department  String?          @db.VarChar(100)
+  created_at  DateTime         @db.Timestamp(6)
+  updated_at  DateTime         @updatedAt @db.Timestamp(6)
+  assignments Assignment[]
+  grades      Grade[]
+  schedules   Schedule[]
+  user        User             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subjects    TeacherSubject[]
+
+  @@index([id], map: "ix_teacher_profiles_id")
+  @@map("teacher_profiles")
+}
+
+model Subject {
+  id          Int              @id @default(autoincrement())
+  name        String           @db.VarChar(100)
+  code        String           @unique @db.VarChar(20)
+  description String?
+  created_at  DateTime         @db.Timestamp(6)
+  updated_at  DateTime         @updatedAt @db.Timestamp(6)
+  assignments Assignment[]
+  grades      Grade[]
+  schedules   Schedule[]
+  teachers    TeacherSubject[]
+
+  @@index([id], map: "ix_subjects_id")
+  @@map("subjects")
+}
+
+model TeacherSubject {
+  teacher_id Int
+  subject_id Int
+  subject    Subject        @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teacher    TeacherProfile @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([teacher_id, subject_id])
+  @@map("teacher_subjects")
+}
+
+model Schedule {
+  id             Int            @id @default(autoincrement())
+  class_id       Int
+  subject_id     Int
+  teacher_id     Int
+  day_of_week    DayOfWeek
+  start_time     DateTime       @db.Time(6)
+  end_time       DateTime       @db.Time(6)
+  room           String?        @db.VarChar(50)
+  effective_from DateTime       @db.Date
+  effective_to   DateTime?      @db.Date
+  created_at     DateTime       @db.Timestamp(6)
+  updated_at     DateTime       @updatedAt @db.Timestamp(6)
+  class_         Class          @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subject        Subject        @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teacher        TeacherProfile @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_schedules_id")
+  @@map("schedules")
+}
+
+model Assignment {
+  id              Int                    @id @default(autoincrement())
+  title           String                 @db.VarChar(255)
+  description     String?
+  assignment_type AssignmentType?
+  subject_id      Int
+  class_id        Int
+  teacher_id      Int
+  due_date        DateTime               @db.Timestamp(6)
+  max_points      Int?
+  is_published    Boolean?
+  created_at      DateTime               @db.Timestamp(6)
+  updated_at      DateTime               @updatedAt @db.Timestamp(6)
+  submissions     AssignmentSubmission[]
+  classes         Class                  @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subject         Subject                @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teacher         TeacherProfile         @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_assignments_id")
+  @@map("assignments")
+}
+
+model AssignmentSubmission {
+  id            Int            @id @default(autoincrement())
+  assignment_id Int
+  student_id    Int
+  content       String?
+  file_url      String?        @db.VarChar(500)
+  submitted_at  DateTime?      @db.Timestamp(6)
+  points_earned Int?
+  feedback      String?
+  is_graded     Boolean?
+  created_at    DateTime       @db.Timestamp(6)
+  updated_at    DateTime       @updatedAt @db.Timestamp(6)
+  assignment    Assignment     @relation(fields: [assignment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student       StudentProfile @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_assignment_submissions_id")
+  @@map("assignment_submissions")
+}
+
+model Grade {
+  id           Int            @id @default(autoincrement())
+  student_id   Int
+  subject_id   Int
+  teacher_id   Int
+  grade_value  Float
+  max_value    Float?
+  grade_type   String         @db.VarChar(50)
+  reference_id Int?
+  date         DateTime       @db.Date
+  comment      String?        @db.VarChar(500)
+  created_at   DateTime       @db.Timestamp(6)
+  updated_at   DateTime       @updatedAt @db.Timestamp(6)
+  student      StudentProfile @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subject      Subject        @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teacher      TeacherProfile @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_grades_id")
+  @@map("grades")
+}
+
+model BlogPost {
+  id         Int      @id @default(autoincrement())
+  title      String   @db.VarChar(255)
+  image      String?  @db.VarChar(500)
+  letter     String
+  date       DateTime @db.Date
+  hot        Boolean?
+  created_at DateTime @db.Timestamp(6)
+  updated_at DateTime @updatedAt @db.Timestamp(6)
+
+  @@index([id], map: "ix_blog_posts_id")
+  @@map("blog_posts")
+}
+
+model Partner {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(255)
+  image       String?  @db.VarChar(500)
+  website     String?  @db.VarChar(500)
+  description String?
+  created_at  DateTime @db.Timestamp(6)
+  updated_at  DateTime @updatedAt @db.Timestamp(6)
+
+  @@index([id], map: "ix_partners_id")
+  @@map("partners")
+}
+
+model Offer {
+  id             Int        @id @default(autoincrement())
+  name           String     @db.VarChar(255)
+  description    String?
+  price          Int
+  image_url      String?    @db.VarChar(500)
+  brand_name     String     @db.VarChar(255)
+  category       String     @db.VarChar(50)
+  stock_quantity Int?
+  is_active      Boolean?
+  created_at     DateTime   @db.Timestamp(6)
+  updated_at     DateTime   @updatedAt @db.Timestamp(6)
+  purchases      Purchase[]
+
+  @@index([id], map: "ix_offers_id")
+  @@map("offers")
+}
+
+model Purchase {
+  id           Int            @id @default(autoincrement())
+  student_id   Int
+  offer_id     Int
+  points_spent Int
+  qr_code      String         @unique(map: "ix_purchases_qr_code") @db.VarChar(255)
+  status       String         @db.VarChar(20)
+  redeemed_at  DateTime?      @db.Timestamp(6)
+  created_at   DateTime       @db.Timestamp(6)
+  updated_at   DateTime       @updatedAt @db.Timestamp(6)
+  offer        Offer          @relation(fields: [offer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student      StudentProfile @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_purchases_id")
+  @@index([offer_id], map: "ix_purchases_offer_id")
+  @@index([student_id], map: "ix_purchases_student_id")
+  @@map("purchases")
+}
+
+model PasswordResetToken {
+  id                   Int       @id @default(autoincrement())
+  user_id              Int
+  token_hash           String    @unique(map: "ix_password_reset_tokens_token_hash") @db.VarChar(64)
+  expires_at           DateTime  @db.Timestamp(6)
+  used_at              DateTime? @db.Timestamp(6)
+  requested_ip         String?   @db.VarChar(45)
+  requested_user_agent String?   @db.VarChar(500)
+  created_at           DateTime  @db.Timestamp(6)
+  updated_at           DateTime  @updatedAt @db.Timestamp(6)
+  user                 User      @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([expires_at], map: "ix_password_reset_tokens_expires_at")
+  @@index([id], map: "ix_password_reset_tokens_id")
+  @@index([used_at], map: "ix_password_reset_tokens_used_at")
+  @@index([user_id], map: "ix_password_reset_tokens_user_id")
+  @@map("password_reset_tokens")
+}
+
+model alembic_version {
+  version_num String @id(map: "alembic_version_pkc") @db.VarChar(32)
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  DIRECTOR
+  ADMIN
+
+  @@map("userrole")
+}
+
+enum AssignmentType {
+  INDIVIDUAL
+  GROUP
+
+  @@map("assignmenttype")
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+
+  @@map("dayofweek")
+}

@@ -10,6 +10,8 @@ const Documentation = lazy(() => import('./pages/Documentation/Documentation'));
 // Auth pages
 const LoginPage = lazy(() => import('./pages/Auth/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/Auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/Auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/Auth/ResetPasswordPage'));
 
 // Dashboard pages
 const DashboardLayout = lazy(() => import('./pages/Dashboard/DashboardLayout'));
@@ -71,6 +73,22 @@ function App() {
               <RegisterPage />
             </Suspense>
           </GuestRoute>
+        }
+      />
+      <Route
+        path="/forgot-password"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <ForgotPasswordPage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <ResetPasswordPage />
+          </Suspense>
         }
       />
 

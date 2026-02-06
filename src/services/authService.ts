@@ -1,8 +1,11 @@
 import api from './api';
 import type {
+  ApiMessageResponse,
+  ForgotPasswordRequest,
   User,
   LoginRequest,
   RegisterRequest,
+  ResetPasswordRequest,
   AuthResponse,
   TokenResponse,
 } from '@/types';
@@ -61,6 +64,22 @@ export const authService = {
     } finally {
       this.clearTokens();
     }
+  },
+
+  /**
+   * Request password reset link
+   */
+  async forgotPassword(data: ForgotPasswordRequest): Promise<ApiMessageResponse> {
+    const response = await api.post<ApiMessageResponse>('/auth/forgot-password', data);
+    return response.data;
+  },
+
+  /**
+   * Reset password with one-time token
+   */
+  async resetPassword(data: ResetPasswordRequest): Promise<ApiMessageResponse> {
+    const response = await api.post<ApiMessageResponse>('/auth/reset-password', data);
+    return response.data;
   },
 
   /**

@@ -27,6 +27,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/imusum
       - SECRET_KEY=${SECRET_KEY:-your-super-secret-key}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - NODE_ENV=production
     depends_on:
       db:
         condition: service_healthy

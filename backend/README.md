@@ -1,52 +1,48 @@
-# ImUsum Backend
+# ImUsum Backend (Node.js)
 
-FastAPI backend for the ImUsum educational platform.
+Fastify + TypeScript + Prisma backend for the ImUsum educational platform.
 
 ## Quick Start
 
 ### Prerequisites
-- Python 3.11+
+- Node.js 20+
 - PostgreSQL 15+
 - Docker (optional)
 
 ### Development Setup
 
-1. **Create virtual environment:**
+1. **Install dependencies:**
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+npm install
 ```
 
-2. **Install dependencies:**
-```bash
-pip install -r requirements.txt
-```
-
-3. **Configure environment:**
+2. **Configure environment:**
 ```bash
 cp .env.example .env
-# Edit .env with your settings
+# or edit existing .env
 ```
 
-4. **Start PostgreSQL** (or use Docker):
+3. **Generate Prisma client:**
 ```bash
-docker run -d --name imusum_db \
-  -e POSTGRES_USER=postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=imusum \
-  -p 5432:5432 \
-  postgres:15
+npm run prisma:generate
 ```
 
-5. **Run migrations:**
+4. **(Optional) Pull schema from existing DB (introspection-first):**
 ```bash
-alembic upgrade head
+npm run prisma:pull
 ```
 
-6. **Start the server:**
+5. **Start API in dev mode:**
 ```bash
-uvicorn app.main:app --reload --port 8000
+npm run dev
+```
+
+### Build & Run
+
+```bash
+npm run build
+npm run start
 ```
 
 ### Docker Setup
@@ -55,56 +51,32 @@ uvicorn app.main:app --reload --port 8000
 docker-compose up -d
 ```
 
-## API Documentation
+## Quality Commands
 
-Once running, visit:
-- Swagger UI: http://localhost:8000/api/v1/docs
-- ReDoc: http://localhost:8000/api/v1/redoc
+- `npm run test` - run Vitest tests
+- `npm run lint` - run ESLint
+- `npm run type-check` - run TypeScript checks
+- `npm run prisma:diff` - generate schema diff report in `reports/schema-diff.sql`
 
-## Endpoints Overview
+## API Base URL
 
-### Authentication
-- `POST /api/v1/auth/register` - Register new user
-- `POST /api/v1/auth/login` - Login
-- `POST /api/v1/auth/refresh` - Refresh token
-- `GET /api/v1/auth/me` - Get current user
-
-### Users
-- `GET /api/v1/users` - List users (Director)
-- `GET /api/v1/users/{id}` - Get user
-- `PUT /api/v1/users/{id}` - Update user
-- `DELETE /api/v1/users/{id}` - Delete user (Director)
-
-### Blogs (Frontend Integration)
-- `GET /api/v1/blogs` - List blogs
-- `GET /api/v1/blogs/{id}` - Get blog
-- `POST /api/v1/blogs` - Create blog (Director)
-- `PUT /api/v1/blogs/{id}` - Update blog (Director)
-- `DELETE /api/v1/blogs/{id}` - Delete blog (Director)
-
-### Schedules
-- `GET /api/v1/schedules` - List schedules
-- `GET /api/v1/schedules/my` - Get my schedule
-- `POST /api/v1/schedules` - Create (Director)
-- `PUT /api/v1/schedules/{id}` - Update (Director)
-- `DELETE /api/v1/schedules/{id}` - Delete (Director)
-
-### Assignments
-- `GET /api/v1/assignments` - List assignments
-- `GET /api/v1/assignments/my` - Get my assignments
-- `POST /api/v1/assignments` - Create (Teacher)
-- `POST /api/v1/assignments/{id}/submit` - Submit (Student)
-
-### Grades
-- `GET /api/v1/grades/my` - Get my grades (Student)
-- `GET /api/v1/grades/summary` - Get grade summary
-- `POST /api/v1/grades` - Create grade (Teacher)
-
-## Frontend Integration
-
-Update your frontend `.env`:
-```
+- Local API: `http://localhost:8000`
+- API prefix: `/api/v1`
+- Frontend env should remain:
+```env
 VITE_API_BASE_URL=http://localhost:8000/api/v1
 ```
 
-The backend endpoints match the existing frontend service patterns in `src/services/blogService.ts`.
+## Endpoints
+
+Implemented with parity to previous FastAPI backend:
+- Auth: `/api/v1/auth/*`
+- Users: `/api/v1/users/*`
+- Blogs: `/api/v1/blogs/*`
+- Schedules: `/api/v1/schedules/*`
+- Assignments: `/api/v1/assignments/*`
+- Grades: `/api/v1/grades/*`
+- Offers: `/api/v1/offers/*`
+- Purchases: `/api/v1/purchases/*`
+- Health: `/health`
+- Root: `/`

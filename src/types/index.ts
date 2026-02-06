@@ -32,6 +32,19 @@ export interface RegisterRequest {
   phone?: string;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+}
+
+export interface ApiMessageResponse {
+  message: string;
+}
+
 export interface AuthResponse {
   user: User;
   access_token: string;
