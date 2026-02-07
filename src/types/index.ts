@@ -32,6 +32,25 @@ export interface RegisterRequest {
   phone?: string;
 }
 
+export interface UserCreateRequest {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  phone?: string;
+  is_active?: boolean;
+}
+
+export interface UserAdminUpdate {
+  first_name?: string;
+  last_name?: string;
+  phone?: string | null;
+  avatar_url?: string | null;
+  school_id?: number | null;
+  is_active?: boolean;
+}
+
 export interface ForgotPasswordRequest {
   email: string;
 }

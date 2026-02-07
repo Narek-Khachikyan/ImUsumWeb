@@ -159,6 +159,27 @@ describe('API parity', () => {
     await app.close();
   });
 
+  it('self-register with non-student role -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/register',
+      payload: {
+        email: 'teacher-register@example.com',
+        password: 'pass123456',
+        first_name: 'Teacher',
+        last_name: 'User',
+        role: 'teacher',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().detail).toBe('Self-registration is only available for students');
+    await app.close();
+  });
+
   it('login wrong password -> 401', async () => {
     const { verifyPassword } = await import('../src/lib/security.js');
     vi.mocked(verifyPassword).mockResolvedValue(false);
@@ -310,6 +331,186 @@ describe('API parity', () => {
     });
 
     expect(response.statusCode).toBe(403);
+    await app.close();
+  });
+
+  it('director can create student user -> 201', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(buildUser({ id: 1, role: 'director' }))
+      .mockResolvedValueOnce(null);
+    mockPrisma.user.create.mockResolvedValue(
+      buildUser({
+        id: 2,
+        role: 'student',
+        email: 'new-student@example.com',
+        first_name: 'New',
+        last_name: 'Student',
+      })
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/users',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        email: 'new-student@example.com',
+        password: 'pass123456',
+        first_name: 'New',
+        last_name: 'Student',
+        role: 'student',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().role).toBe('student');
+    expect(mockPrisma.studentProfile.create).toHaveBeenCalledTimes(1);
+    await app.close();
+  });
+
+  it('director cannot create admin user -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValueOnce(buildUser({ id: 1, role: 'director' }));
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/users',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        email: 'new-admin@example.com',
+        password: 'pass123456',
+        first_name: 'New',
+        last_name: 'Admin',
+        role: 'admin',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().detail).toBe('Directors can only manage students and teachers');
+    await app.close();
+  });
+
+  it('admin can create director user -> 201', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(buildUser({ id: 1, role: 'admin' }))
+      .mockResolvedValueOnce(null);
+    mockPrisma.user.create.mockResolvedValue(
+      buildUser({
+        id: 3,
+        role: 'director',
+        email: 'new-director@example.com',
+        first_name: 'New',
+        last_name: 'Director',
+      })
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/users',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        email: 'new-director@example.com',
+        password: 'pass123456',
+        first_name: 'New',
+        last_name: 'Director',
+        role: 'director',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().role).toBe('director');
+    await app.close();
+  });
+
+  it('director cannot update admin user -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(buildUser({ id: 1, role: 'director' }))
+      .mockResolvedValueOnce(buildUser({ id: 2, role: 'admin' }));
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/users/2',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { first_name: 'Blocked' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().detail).toBe('Directors can only manage students and teachers');
+    await app.close();
+  });
+
+  it('director cannot change admin role -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(buildUser({ id: 1, role: 'director' }))
+      .mockResolvedValueOnce(buildUser({ id: 2, role: 'admin' }));
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/users/2/role?role=teacher',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().detail).toBe('Directors can only manage students and teachers');
+    await app.close();
+  });
+
+  it('director cannot delete admin user -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(buildUser({ id: 1, role: 'director' }))
+      .mockResolvedValueOnce(buildUser({ id: 2, role: 'admin' }));
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: '/api/v1/users/2',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().detail).toBe('Directors can only manage students and teachers');
+    await app.close();
+  });
+
+  it('cannot deactivate your own account -> 400', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique
+      .mockResolvedValueOnce(buildUser({ id: 1, role: 'admin' }))
+      .mockResolvedValueOnce(buildUser({ id: 1, role: 'admin', is_active: true }));
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/users/1',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { is_active: false },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().detail).toBe('Cannot deactivate your own account');
     await app.close();
   });
 

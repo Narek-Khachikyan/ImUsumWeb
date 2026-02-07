@@ -2,7 +2,6 @@ import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import SEO from '@/components/ui/SEO';
-import type { UserRole } from '@/types';
 
 export default function RegisterPage() {
    const navigate = useNavigate();
@@ -14,7 +13,6 @@ export default function RegisterPage() {
       first_name: '',
       last_name: '',
       phone: '',
-      role: 'student' as UserRole,
    });
    const [validationError, setValidationError] = useState('');
 
@@ -39,7 +37,6 @@ export default function RegisterPage() {
          first_name: formData.first_name,
          last_name: formData.last_name,
          phone: formData.phone || undefined,
-         role: formData.role,
       });
 
       if (result.meta.requestStatus === 'fulfilled') {
@@ -147,25 +144,6 @@ export default function RegisterPage() {
                            className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-main focus:border-transparent"
                            placeholder="+374 (99) 123-456"
                         />
-                     </div>
-
-                     <div>
-                        <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                           Դեր
-                        </label>
-                        <select
-                           id="role"
-                           name="role"
-                           value={formData.role}
-                           onChange={(e) =>
-                              setFormData({ ...formData, role: e.target.value as UserRole })
-                           }
-                           className="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-main focus:border-transparent"
-                        >
-                           <option value="student">Աշակերտ</option>
-                           <option value="teacher">Ուսուցիչ</option>
-                           <option value="director">Տնօրեն</option>
-                        </select>
                      </div>
 
                      <div>

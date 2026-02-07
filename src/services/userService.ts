@@ -1,13 +1,5 @@
 import api from './api';
-import type { User } from '@/types';
-
-export interface UserUpdate {
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  avatar_url?: string;
-  school_id?: number;
-}
+import type { User, UserAdminUpdate, UserCreateRequest } from '@/types';
 
 export const userService = {
   async getAll(params?: { skip?: number; limit?: number; role?: string }): Promise<User[]> {
@@ -20,7 +12,12 @@ export const userService = {
     return response.data;
   },
 
-  async update(id: number, data: UserUpdate): Promise<User> {
+  async create(data: UserCreateRequest): Promise<User> {
+    const response = await api.post<User>('/users', data);
+    return response.data;
+  },
+
+  async update(id: number, data: UserAdminUpdate): Promise<User> {
     const response = await api.put<User>(`/users/${id}`, data);
     return response.data;
   },

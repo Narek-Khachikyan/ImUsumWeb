@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { UserRole } from '@prisma/client';
 
 import { env } from '../../config/env.js';
-import { conflict, unauthorized, badRequest } from '../../lib/errors.js';
+import { conflict, unauthorized, badRequest, forbidden } from '../../lib/errors.js';
 import { prisma } from '../../lib/prisma.js';
 import { getPasswordHash, verifyPassword } from '../../lib/security.js';
 import { serializeUser } from '../../lib/serializers.js';
@@ -49,6 +49,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
       avatar_url?: string;
       school_id?: number;
     };
+
+    if (body.role && body.role !== 'student') {
+      forbidden('Self-registration is only available for students');
+    }
 
     const existingUser = await prisma.user.findUnique({ where: { email: body.email } });
     if (existingUser) {
