@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const now = new Date('2026-02-06T10:00:00.000Z');
@@ -45,6 +48,7 @@ const { mockPrisma, requestPasswordReset, resetPasswordWithToken } = vi.hoisted(
       update: vi.fn(),
     },
     grade: {
+      findUnique: vi.fn(),
       findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
@@ -135,7 +139,7 @@ function buildAssignment(overrides: Record<string, unknown> = {}) {
     class_id: 1,
     teacher_id: 1,
     due_date: new Date('2026-02-10T10:00:00.000Z'),
-    max_points: 100,
+    max_points: 10,
     is_published: true,
     created_at: now,
     updated_at: now,
@@ -166,8 +170,8 @@ function buildGrade(overrides: Record<string, unknown> = {}) {
     student_id: 1,
     subject_id: 2,
     teacher_id: 1,
-    grade_value: 95,
-    max_value: 100,
+    grade_value: 9,
+    max_value: 10,
     grade_type: 'Assignment',
     reference_id: 1,
     date: new Date('2026-02-06'),
@@ -220,12 +224,24 @@ function buildTestAttempt(overrides: Record<string, unknown> = {}) {
     student_id: 10,
     submitted_at: now,
     score_points: 5,
-    max_points: 5,
-    percentage: 100,
+    max_points: 10,
+    percentage: 50,
     created_at: now,
     updated_at: now,
     ...overrides,
   };
+}
+
+function resolveGradingMigrationPath(): string {
+  const migrationSuffix = 'prisma/migrations/20260207200000_normalize_grading_to_10/migration.sql';
+  const candidates = [resolve(process.cwd(), migrationSuffix), resolve(process.cwd(), `backend/${migrationSuffix}`)];
+  const matched = candidates.find((candidate) => existsSync(candidate));
+
+  if (!matched) {
+    throw new Error(`Could not locate grading migration SQL. Looked in: ${candidates.join(', ')}`);
+  }
+
+  return matched;
 }
 
 describe('API parity', () => {
@@ -250,6 +266,7 @@ describe('API parity', () => {
       buildSubmission({ points_earned: 10, feedback: 'Checked', is_graded: true })
     );
     mockPrisma.assignment.findUnique.mockResolvedValue(buildAssignment());
+    mockPrisma.grade.findUnique.mockResolvedValue(buildGrade());
     mockPrisma.grade.findFirst.mockResolvedValue(null);
     mockPrisma.grade.create.mockResolvedValue(buildGrade());
     mockPrisma.grade.update.mockResolvedValue(buildGrade());
@@ -818,13 +835,13 @@ describe('API parity', () => {
     const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
     mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
     mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
-    mockPrisma.assignment.findUnique.mockResolvedValue(buildAssignment({ id: 7, teacher_id: 99, max_points: 20 }));
+    mockPrisma.assignment.findUnique.mockResolvedValue(buildAssignment({ id: 7, teacher_id: 99, max_points: 10 }));
 
     const response = await app.inject({
       method: 'PUT',
       url: '/api/v1/assignments/7/submissions/9',
       headers: { authorization: `Bearer ${token}` },
-      payload: { points_earned: 15, feedback: 'good' },
+      payload: { points_earned: 9, feedback: 'good' },
     });
 
     expect(response.statusCode).toBe(403);
@@ -839,7 +856,7 @@ describe('API parity', () => {
     mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
     mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
     mockPrisma.assignment.findUnique.mockResolvedValue(
-      buildAssignment({ id: 7, teacher_id: 11, subject_id: 9, max_points: 20 })
+      buildAssignment({ id: 7, teacher_id: 11, subject_id: 9, max_points: 10 })
     );
     mockPrisma.assignmentSubmission.findFirst.mockResolvedValue(
       buildSubmission({ id: 9, assignment_id: 7, student_id: 55 })
@@ -849,7 +866,7 @@ describe('API parity', () => {
         id: 9,
         assignment_id: 7,
         student_id: 55,
-        points_earned: 18,
+        points_earned: 9,
         feedback: 'Great work',
         is_graded: true,
       })
@@ -862,8 +879,8 @@ describe('API parity', () => {
         subject_id: 9,
         teacher_id: 11,
         reference_id: 7,
-        grade_value: 18,
-        max_value: 20,
+        grade_value: 9,
+        max_value: 10,
       })
     );
 
@@ -871,7 +888,7 @@ describe('API parity', () => {
       method: 'PUT',
       url: '/api/v1/assignments/7/submissions/9',
       headers: { authorization: `Bearer ${token}` },
-      payload: { points_earned: 18, feedback: 'Great work' },
+      payload: { points_earned: 9, feedback: 'Great work' },
     });
 
     expect(response.statusCode).toBe(200);
@@ -884,13 +901,264 @@ describe('API parity', () => {
           teacher_id: 11,
           reference_id: 7,
           grade_type: 'Assignment',
-          grade_value: 18,
-          max_value: 20,
+          grade_value: 9,
+          max_value: 10,
         }),
       })
     );
     expect(mockPrisma.studentProfile.update).toHaveBeenCalledTimes(1);
     await app.close();
+  });
+
+  it('owner teacher grading rejects invalid 10-point values -> 400', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
+    mockPrisma.assignment.findUnique.mockResolvedValue(
+      buildAssignment({ id: 7, teacher_id: 11, subject_id: 9, max_points: 10 })
+    );
+    mockPrisma.assignmentSubmission.findFirst.mockResolvedValue(
+      buildSubmission({ id: 9, assignment_id: 7, student_id: 55 })
+    );
+
+    for (const points of [1, 11, 7.5]) {
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/api/v1/assignments/7/submissions/9',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { points_earned: points, feedback: 'invalid' },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().detail).toBe('points_earned must be an integer between 2 and 10');
+    }
+
+    await app.close();
+  });
+
+  it('owner teacher grading accepts 2 and 10 -> 200', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
+    mockPrisma.assignment.findUnique.mockResolvedValue(
+      buildAssignment({ id: 7, teacher_id: 11, subject_id: 9, max_points: 10 })
+    );
+    mockPrisma.assignmentSubmission.findFirst.mockResolvedValue(
+      buildSubmission({ id: 9, assignment_id: 7, student_id: 55 })
+    );
+
+    for (const points of [2, 10]) {
+      mockPrisma.assignmentSubmission.update.mockResolvedValue(
+        buildSubmission({
+          id: 9,
+          assignment_id: 7,
+          student_id: 55,
+          points_earned: points,
+          feedback: `Score ${points}`,
+          is_graded: true,
+        })
+      );
+      mockPrisma.grade.create.mockResolvedValue(
+        buildGrade({
+          id: 81 + points,
+          student_id: 55,
+          subject_id: 9,
+          teacher_id: 11,
+          reference_id: 7,
+          grade_value: points,
+          max_value: 10,
+        })
+      );
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/api/v1/assignments/7/submissions/9',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { points_earned: points, feedback: `Score ${points}` },
+      });
+
+      expect(response.statusCode).toBe(200);
+    }
+
+    await app.close();
+  });
+
+  it('teacher grade create enforces 2..10 and max_value=10', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
+
+    for (const gradeValue of [1, 11, 7.5]) {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/grades',
+        headers: { authorization: `Bearer ${token}` },
+        payload: {
+          student_id: 55,
+          subject_id: 9,
+          grade_value: gradeValue,
+          max_value: 10,
+          grade_type: 'Manual',
+          date: '2026-02-07',
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().detail).toBe('grade_value must be an integer between 2 and 10');
+    }
+
+    const wrongMaxResponse = await app.inject({
+      method: 'POST',
+      url: '/api/v1/grades',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        student_id: 55,
+        subject_id: 9,
+        grade_value: 9,
+        max_value: 20,
+        grade_type: 'Manual',
+        date: '2026-02-07',
+      },
+    });
+    expect(wrongMaxResponse.statusCode).toBe(400);
+    expect(wrongMaxResponse.json().detail).toBe('max_value must be 10');
+
+    for (const gradeValue of [2, 10]) {
+      mockPrisma.grade.create.mockResolvedValue(
+        buildGrade({
+          id: 90 + gradeValue,
+          student_id: 55,
+          subject_id: 9,
+          teacher_id: 11,
+          grade_value: gradeValue,
+          max_value: 10,
+          grade_type: 'Manual',
+          reference_id: null,
+        })
+      );
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/v1/grades',
+        headers: { authorization: `Bearer ${token}` },
+        payload: {
+          student_id: 55,
+          subject_id: 9,
+          grade_value: gradeValue,
+          max_value: 10,
+          grade_type: 'Manual',
+          date: '2026-02-07',
+        },
+      });
+
+      expect(response.statusCode).toBe(201);
+      expect(mockPrisma.grade.create).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            grade_value: gradeValue,
+            max_value: 10,
+          }),
+        })
+      );
+    }
+
+    await app.close();
+  });
+
+  it('teacher grade update enforces 2..10 and max_value=10', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.grade.findUnique.mockResolvedValue(buildGrade({ id: 77, grade_value: 9, max_value: 10 }));
+
+    for (const gradeValue of [1, 11, 7.5]) {
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/api/v1/grades/77',
+        headers: { authorization: `Bearer ${token}` },
+        payload: {
+          grade_value: gradeValue,
+        },
+      });
+
+      expect(response.statusCode).toBe(400);
+      expect(response.json().detail).toBe('grade_value must be an integer between 2 and 10');
+    }
+
+    const wrongMaxResponse = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/grades/77',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        max_value: 20,
+      },
+    });
+    expect(wrongMaxResponse.statusCode).toBe(400);
+    expect(wrongMaxResponse.json().detail).toBe('max_value must be 10');
+
+    for (const gradeValue of [2, 10]) {
+      mockPrisma.grade.update.mockResolvedValue(
+        buildGrade({
+          id: 77,
+          grade_value: gradeValue,
+          max_value: 10,
+        })
+      );
+
+      const response = await app.inject({
+        method: 'PUT',
+        url: '/api/v1/grades/77',
+        headers: { authorization: `Bearer ${token}` },
+        payload: {
+          grade_value: gradeValue,
+          max_value: 10,
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      expect(mockPrisma.grade.update).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          where: { id: 77 },
+          data: expect.objectContaining({
+            grade_value: gradeValue,
+            max_value: 10,
+          }),
+        })
+      );
+    }
+
+    await app.close();
+  });
+
+  it('grading normalization migration includes conversion and DB checks for 2..10 scale', () => {
+    const migrationSql = readFileSync(resolveGradingMigrationPath(), 'utf8');
+    const normalizationFormulaCount = (migrationSql.match(/ROUND\(2 \+/g) ?? []).length;
+
+    expect(normalizationFormulaCount).toBeGreaterThanOrEqual(3);
+    expect(migrationSql).toContain('UPDATE "grades"');
+    expect(migrationSql).toContain('"max_value" = 10');
+    expect(migrationSql).toContain('UPDATE "assignment_submissions" AS s');
+    expect(migrationSql).toContain('UPDATE "assignments"');
+    expect(migrationSql).toContain('"max_points" = 10');
+    expect(migrationSql).toContain('UPDATE "test_attempts"');
+    expect(migrationSql).toContain('"score_points" BETWEEN 2 AND 10');
+    expect(migrationSql).toContain('"ck_grades_grade_value_2_10"');
+    expect(migrationSql).toContain('"ck_grades_max_value_10"');
+    expect(migrationSql).toContain('"ck_assignment_submissions_points_earned_2_10"');
+    expect(migrationSql).toContain('"ck_assignments_max_points_10"');
+    expect(migrationSql).toContain('"ck_test_attempts_score_points_2_10"');
+    expect(migrationSql).toContain('"ck_test_attempts_max_points_10"');
   });
 
   it('assignment duplicate submission on unique race -> 409', async () => {
@@ -1034,7 +1302,7 @@ describe('API parity', () => {
       fn({
         testAttempt: {
           create: vi.fn().mockResolvedValue({
-            ...buildTestAttempt({ id: 301, test_id: 7, student_id: 10, score_points: 5, max_points: 5, percentage: 100 }),
+            ...buildTestAttempt({ id: 301, test_id: 7, student_id: 10, score_points: 10, max_points: 10, percentage: 100 }),
             answers: [
               {
                 id: 901,
@@ -1056,8 +1324,8 @@ describe('API parity', () => {
               grade_type: 'Test',
               reference_id: 7,
               student_id: 10,
-              grade_value: 5,
-              max_value: 5,
+              grade_value: 10,
+              max_value: 10,
             })
           ),
           update: vi.fn(),
@@ -1078,8 +1346,8 @@ describe('API parity', () => {
     expect(submitResponse.json().attempt).toMatchObject({
       test_id: 7,
       student_id: 10,
-      score_points: 5,
-      max_points: 5,
+      score_points: 10,
+      max_points: 10,
       percentage: 100,
     });
 

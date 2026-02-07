@@ -58,7 +58,7 @@ function buildAssignment(overrides: Partial<Assignment> = {}): Assignment {
     class_id: 7,
     teacher_id: 11,
     due_date: '2026-02-20T10:00:00.000Z',
-    max_points: 100,
+    max_points: 10,
     is_published: true,
     created_at: '2026-02-07T10:00:00.000Z',
     updated_at: '2026-02-07T10:00:00.000Z',
@@ -147,7 +147,7 @@ describe('AssignmentsPage', () => {
         1: buildSubmission({
           assignment_id: 1,
           is_graded: true,
-          points_earned: 88,
+          points_earned: 9,
           feedback: 'Լավ աշխատանք',
         }),
       },
@@ -157,7 +157,7 @@ describe('AssignmentsPage', () => {
     render(<AssignmentsPage />);
 
     expect(screen.getByText('Ստուգված')).toBeInTheDocument();
-    expect(screen.getByText('Արդյունք: 88/100')).toBeInTheDocument();
+    expect(screen.getByText('Արդյունք: 9/10')).toBeInTheDocument();
     expect(screen.getByText('Լավ աշխատանք')).toBeInTheDocument();
   });
 
@@ -185,9 +185,9 @@ describe('AssignmentsPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Ստուգել հանձնումները' }));
 
-    const pointsInput = await screen.findByLabelText('Միավոր (100)');
+    const pointsInput = await screen.findByLabelText('Միավոր (10)');
     await user.clear(pointsInput);
-    await user.type(pointsInput, '95');
+    await user.type(pointsInput, '10');
     await user.type(screen.getByLabelText('Feedback'), 'Great result');
     await user.click(screen.getByRole('button', { name: 'Պահպանել արդյունքը' }));
 
@@ -196,7 +196,7 @@ describe('AssignmentsPage', () => {
         assignmentId: 1,
         submissionId: 9,
         data: {
-          points_earned: 95,
+          points_earned: 10,
           feedback: 'Great result',
         },
       });

@@ -6,12 +6,12 @@ const GRADE_BONUS_THRESHOLDS: Array<{ threshold: number; points: number }> = [
   { threshold: 70, points: 2 },
 ];
 
-export async function awardBonusPoints(studentId: number, gradeValue: number, maxValue: number): Promise<number> {
-  if (maxValue <= 0) {
+export async function awardBonusPoints(studentId: number, percentageInput: number): Promise<number> {
+  if (!Number.isFinite(percentageInput)) {
     return 0;
   }
 
-  const percentage = (gradeValue / maxValue) * 100;
+  const percentage = Math.min(Math.max(percentageInput, 0), 100);
   for (const { threshold, points } of GRADE_BONUS_THRESHOLDS) {
     if (percentage >= threshold) {
       await prisma.studentProfile.update({

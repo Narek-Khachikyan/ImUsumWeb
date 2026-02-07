@@ -4,13 +4,26 @@ import type { FastifyPluginAsync } from 'fastify';
 import { TEACHER_PLUS_ROLES } from '../../lib/auth.js';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors.js';
 import { awardBonusPoints } from '../../lib/gradeBonus.js';
+import { assertTenGrade, tenToRatio } from '../../lib/gradingScale.js';
 import { prisma } from '../../lib/prisma.js';
 import { serializeAssignment, serializeSubmission } from '../../lib/serializers.js';
+
+const TEN_SCALE_MAX_POINTS = 10;
 
 function parsePositiveInt(value: string, detail: string): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) {
     badRequest(detail);
+  }
+  return parsed;
+}
+
+function parseTenScalePoints(value: unknown, fieldName = 'points_earned'): number {
+  const parsed = Number(value);
+  try {
+    assertTenGrade(parsed);
+  } catch {
+    badRequest(`${fieldName} must be an integer between 2 and 10`);
   }
   return parsed;
 }
@@ -180,7 +193,7 @@ const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
         class_id: body.class_id,
         teacher_id: teacher.id,
         due_date: new Date(body.due_date),
-        max_points: body.max_points ?? 100,
+        max_points: TEN_SCALE_MAX_POINTS,
         is_published: body.is_published ?? false,
         created_at: new Date(),
       },
@@ -220,7 +233,7 @@ const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
           ...(body.description !== undefined ? { description: body.description } : {}),
           ...(body.assignment_type !== undefined ? { assignment_type: body.assignment_type } : {}),
           ...(body.due_date !== undefined ? { due_date: new Date(body.due_date) } : {}),
-          ...(body.max_points !== undefined ? { max_points: body.max_points } : {}),
+          max_points: TEN_SCALE_MAX_POINTS,
           ...(body.is_published !== undefined ? { is_published: body.is_published } : {}),
         },
       });
@@ -370,11 +383,8 @@ const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
       const currentUser = request.currentUser!;
       await assertTeacherOwnsAssignment(currentUser, assignment, 'Not authorized to grade submissions for this assignment');
 
-      const maxPoints = assignment.max_points ?? 100;
-      const pointsEarned = Number(body.points_earned);
-      if (!Number.isFinite(pointsEarned) || pointsEarned < 0 || pointsEarned > maxPoints) {
-        badRequest(`points_earned must be between 0 and ${maxPoints}`);
-      }
+      const maxPoints = TEN_SCALE_MAX_POINTS;
+      const pointsEarned = parseTenScalePoints(body.points_earned);
 
       const submission = await prisma.assignmentSubmission.findFirst({
         where: {
@@ -432,7 +442,7 @@ const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
             created_at: new Date(),
           },
         });
-        await awardBonusPoints(createdGrade.student_id, createdGrade.grade_value, createdGrade.max_value ?? maxPoints);
+        await awardBonusPoints(createdGrade.student_id, tenToRatio(createdGrade.grade_value) * 100);
       }
 
       return serializeSubmission(updatedSubmission);

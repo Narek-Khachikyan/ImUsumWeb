@@ -22,6 +22,7 @@ export interface AssignmentCreate {
   subject_id: number;
   class_id: number;
   due_date: string;
+  // Backward-compatible field. Backend normalizes this to 10.
   max_points?: number;
   is_published?: boolean;
 }

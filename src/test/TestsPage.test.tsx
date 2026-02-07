@@ -163,6 +163,29 @@ describe('TestsPage', () => {
     });
   });
 
+  it('student sees attempt score in 10-point format', () => {
+    const listItem = buildListItem({
+      attempt: {
+        id: 301,
+        test_id: 1,
+        student_id: 5,
+        submitted_at: '2026-02-08T10:00:00.000Z',
+        score_points: 8,
+        max_points: 10,
+        percentage: 80,
+        created_at: '2026-02-08T10:00:00.000Z',
+        updated_at: '2026-02-08T10:00:00.000Z',
+      },
+    });
+    setState({ myTests: [listItem] });
+    mockUseAuth.mockReturnValue({ user: { id: 5, role: 'student' } });
+
+    render(<TestsPage />);
+
+    expect(screen.getByText('Արդյունք: 8/10')).toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
+  });
+
   it('teacher creates test from modal', async () => {
     mockUseAuth.mockReturnValue({ user: { id: 1, role: 'teacher' } });
 

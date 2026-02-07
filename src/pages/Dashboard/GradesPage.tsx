@@ -4,6 +4,7 @@ import { fetchMyGrades, fetchGradeSummary } from '@/app/slices/gradeSlice';
 import { type Grade, type GradeSummary } from '@/services/gradeService';
 
 export default function GradesPage() {
+   const TEN_SCALE_MAX = 10;
    const dispatch = useAppDispatch();
    const { myGrades, summary, isLoading } = useAppSelector((state) => state.grade);
 
@@ -124,11 +125,7 @@ export default function GradesPage() {
    const displayedSummary = shouldShowDemo ? demoSummary : summary;
    const displayedGrades = shouldShowDemo ? demoGrades : myGrades;
    const roundGradeValue = (value: number) => Math.round(value);
-   const summaryMax =
-      displayedSummary.length > 0
-         ? Math.max(...displayedSummary.map((subject) => subject.highest))
-         : 100;
-   const summaryScale = summaryMax <= 10 ? 10 : 100;
+   const summaryScale = TEN_SCALE_MAX;
    const averageGrade =
       displayedSummary.length > 0
          ? displayedSummary.reduce((acc, s) => acc + s.average, 0) / displayedSummary.length
@@ -238,7 +235,7 @@ export default function GradesPage() {
                         </div>
                         <div className="text-right">
                            {(() => {
-                              const maxValue = grade.max_value || 100;
+                              const maxValue = grade.max_value || TEN_SCALE_MAX;
                               const roundedGradeValue = roundGradeValue(grade.grade_value);
                               const percent = (roundedGradeValue / maxValue) * 100;
                               const colorClass =
@@ -253,7 +250,7 @@ export default function GradesPage() {
                                     <span className={`text-2xl font-bold ${colorClass}`}>
                                        {roundedGradeValue}
                                     </span>
-                                    <span className="text-gray-400">/{grade.max_value}</span>
+                                    <span className="text-gray-400">/{TEN_SCALE_MAX}</span>
                                  </>
                               );
                            })()}

@@ -3,9 +3,32 @@ import type { FastifyPluginAsync } from 'fastify';
 import { TEACHER_PLUS_ROLES } from '../../lib/auth.js';
 import { badRequest, forbidden, notFound } from '../../lib/errors.js';
 import { awardBonusPoints } from '../../lib/gradeBonus.js';
+import { assertTenGrade, tenToRatio } from '../../lib/gradingScale.js';
 import { prisma } from '../../lib/prisma.js';
 import { serializeGrade } from '../../lib/serializers.js';
 import { parseDateOnly } from '../../lib/time.js';
+
+const TEN_SCALE_MAX_VALUE = 10;
+
+function parseTenScaleGrade(value: unknown, fieldName = 'grade_value'): number {
+  const parsed = Number(value);
+  try {
+    assertTenGrade(parsed);
+  } catch {
+    badRequest(`${fieldName} must be an integer between 2 and 10`);
+  }
+  return parsed;
+}
+
+function assertTenScaleMaxValue(value: unknown): void {
+  if (value === undefined || value === null) {
+    return;
+  }
+
+  if (Number(value) !== TEN_SCALE_MAX_VALUE) {
+    badRequest('max_value must be 10');
+  }
+}
 
 const gradesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('', { preHandler: [fastify.authenticate] }, async (request) => {
@@ -107,14 +130,16 @@ const gradesRoutes: FastifyPluginAsync = async (fastify) => {
     if (!teacher) {
       badRequest('Teacher profile not found');
     }
+    assertTenScaleMaxValue(body.max_value);
+    const gradeValue = parseTenScaleGrade(body.grade_value);
 
     const grade = await prisma.grade.create({
       data: {
         student_id: body.student_id,
         subject_id: body.subject_id,
         teacher_id: teacher.id,
-        grade_value: body.grade_value,
-        max_value: body.max_value ?? 100,
+        grade_value: gradeValue,
+        max_value: TEN_SCALE_MAX_VALUE,
         grade_type: body.grade_type,
         reference_id: body.reference_id ?? null,
         date: parseDateOnly(body.date),
@@ -122,7 +147,7 @@ const gradesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    await awardBonusPoints(grade.student_id, grade.grade_value, grade.max_value ?? 100);
+    await awardBonusPoints(grade.student_id, tenToRatio(grade.grade_value) * 100);
     return reply.status(201).send(serializeGrade(grade));
   });
 
@@ -142,12 +167,14 @@ const gradesRoutes: FastifyPluginAsync = async (fastify) => {
       if (!grade) {
         notFound('Grade not found');
       }
+      assertTenScaleMaxValue(body.max_value);
+      const nextGradeValue = body.grade_value !== undefined ? parseTenScaleGrade(body.grade_value) : undefined;
 
       const updated = await prisma.grade.update({
         where: { id: gradeId },
         data: {
-          ...(body.grade_value !== undefined ? { grade_value: body.grade_value } : {}),
-          ...(body.max_value !== undefined ? { max_value: body.max_value } : {}),
+          max_value: TEN_SCALE_MAX_VALUE,
+          ...(nextGradeValue !== undefined ? { grade_value: nextGradeValue } : {}),
           ...(body.comment !== undefined ? { comment: body.comment } : {}),
         },
       });

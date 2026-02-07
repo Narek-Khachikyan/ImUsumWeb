@@ -36,6 +36,8 @@ interface ReviewFormState {
 }
 
 type StudentSubmissionStatus = 'not_submitted' | 'submitted' | 'checked';
+const TEN_SCALE_MIN_POINTS = 2;
+const TEN_SCALE_MAX_POINTS = 10;
 
 function formatDateTimeLocal(input: string) {
   const date = new Date(input);
@@ -73,7 +75,7 @@ function getInitialFormState(): AssignmentFormState {
     subject_id: '',
     class_id: '',
     due_date: getDefaultDueDateValue(),
-    max_points: '100',
+    max_points: String(TEN_SCALE_MAX_POINTS),
     is_published: false,
   };
 }
@@ -210,7 +212,7 @@ export default function AssignmentsPage() {
       subject_id: String(assignment.subject_id),
       class_id: String(assignment.class_id),
       due_date: formatDateTimeLocal(assignment.due_date),
-      max_points: String(assignment.max_points),
+      max_points: String(TEN_SCALE_MAX_POINTS),
       is_published: assignment.is_published,
     });
     setModalError(null);
@@ -301,9 +303,8 @@ export default function AssignmentsPage() {
       return;
     }
 
-    const maxPoints = Number(formState.max_points);
-    if (!Number.isFinite(maxPoints) || maxPoints <= 0) {
-      setModalError('Միավորների առավելագույն արժեքը պետք է լինի 0-ից մեծ');
+    if (Number(formState.max_points) !== TEN_SCALE_MAX_POINTS) {
+      setModalError('Առավելագույն միավորը ֆիքսված է 10');
       return;
     }
 
@@ -315,7 +316,7 @@ export default function AssignmentsPage() {
       title: trimmedTitle,
       assignment_type: assignmentType,
       due_date: dueDate.toISOString(),
-      max_points: maxPoints,
+      max_points: TEN_SCALE_MAX_POINTS,
       is_published: formState.is_published,
       ...descriptionPayload,
     };
@@ -340,7 +341,7 @@ export default function AssignmentsPage() {
         subject_id: subjectId,
         class_id: classId,
         due_date: dueDate.toISOString(),
-        max_points: maxPoints,
+        max_points: TEN_SCALE_MAX_POINTS,
         is_published: formState.is_published,
         ...descriptionPayload,
       };
@@ -417,10 +418,14 @@ export default function AssignmentsPage() {
       feedback: '',
     };
     const points = Number(formStateForSubmission.points_earned);
-    const maxPoints = reviewingAssignment.max_points;
-
-    if (!Number.isFinite(points) || points < 0 || points > maxPoints) {
-      setReviewError(`Միավորները պետք է լինեն 0-ից ${maxPoints} միջակայքում`);
+    if (
+      !Number.isInteger(points) ||
+      points < TEN_SCALE_MIN_POINTS ||
+      points > TEN_SCALE_MAX_POINTS
+    ) {
+      setReviewError(
+        `Միավորները պետք է լինեն ամբողջ թիվ ${TEN_SCALE_MIN_POINTS}-${TEN_SCALE_MAX_POINTS} միջակայքում`
+      );
       return;
     }
 
@@ -469,7 +474,7 @@ export default function AssignmentsPage() {
         {submission?.is_graded && (
           <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
             <p className="font-semibold">
-              Արդյունք: {submission.points_earned ?? 0}/{assignment.max_points}
+              Արդյունք: {submission.points_earned ?? TEN_SCALE_MIN_POINTS}/{TEN_SCALE_MAX_POINTS}
             </p>
             {submission.feedback && <p className="mt-1 text-green-700">{submission.feedback}</p>}
           </div>
@@ -517,7 +522,7 @@ export default function AssignmentsPage() {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-gray-500">Առավելագույն միավոր</span>
-          <span className="font-medium text-blue-main">{assignment.max_points}</span>
+          <span className="font-medium text-blue-main">{TEN_SCALE_MAX_POINTS}</span>
         </div>
       </div>
 
@@ -686,10 +691,12 @@ export default function AssignmentsPage() {
                   <input
                     id="max_points"
                     type="number"
-                    min={1}
+                    min={TEN_SCALE_MAX_POINTS}
+                    max={TEN_SCALE_MAX_POINTS}
                     value={formState.max_points}
                     onChange={(event) => setFormState((state) => ({ ...state, max_points: event.target.value }))}
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-main focus:border-transparent"
+                    readOnly
                     required
                   />
                 </div>
@@ -916,13 +923,14 @@ export default function AssignmentsPage() {
                             htmlFor={`review_points_${submission.id}`}
                             className="block text-sm font-medium text-gray-700"
                           >
-                            Միավոր ({reviewingAssignment.max_points})
+                            Միավոր ({TEN_SCALE_MAX_POINTS})
                           </label>
                           <input
                             id={`review_points_${submission.id}`}
                             type="number"
-                            min={0}
-                            max={reviewingAssignment.max_points}
+                            min={TEN_SCALE_MIN_POINTS}
+                            max={TEN_SCALE_MAX_POINTS}
+                            step={1}
                             value={reviewForm.points_earned}
                             onChange={(event) =>
                               handleReviewFormChange(submission.id, { points_earned: event.target.value })

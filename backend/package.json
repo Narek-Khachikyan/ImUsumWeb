@@ -13,8 +13,13 @@
     "type-check": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:pull": "prisma db pull",
+    "prisma:seed": "prisma db seed",
+    "db:reset:seed": "prisma migrate reset --force --skip-generate --skip-seed && prisma db seed",
     "prisma:diff": "bash scripts/schema-diff.sh",
     "smoke": "tsx scripts/integration-check.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.1",

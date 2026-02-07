@@ -106,6 +106,7 @@ function getTestStatusBadge(test: TestListItem) {
 }
 
 export default function TestsPage() {
+  const TEN_SCALE_MAX_POINTS = 10;
   const dispatch = useAppDispatch();
   const { user } = useAuth();
   const { myTests, currentTest, attempt, results, analytics, isLoading, error } = useAppSelector((state) => state.test);
@@ -587,7 +588,7 @@ export default function TestsPage() {
         {hasAttempt && test.attempt ? (
           <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
             <p className="font-semibold">
-              Արդյունք: {test.attempt.score_points}/{test.attempt.max_points}
+              Արդյունք: {test.attempt.score_points}/{TEN_SCALE_MAX_POINTS}
             </p>
             <p>{test.attempt.percentage}%</p>
           </div>
@@ -870,7 +871,7 @@ export default function TestsPage() {
               <div className="rounded-xl border border-green-200 bg-green-50 p-4">
                 <p className="text-sm text-green-700">Միավոր</p>
                 <p className="text-2xl font-bold text-green-800">
-                  {attempt.attempt.score_points}/{attempt.attempt.max_points}
+                  {attempt.attempt.score_points}/{TEN_SCALE_MAX_POINTS}
                 </p>
                 <p className="text-sm text-green-700">{attempt.attempt.percentage}%</p>
               </div>
@@ -1122,7 +1123,7 @@ export default function TestsPage() {
                               </p>
                               <p className="text-sm text-gray-500">{formatDisplayDate(item.submitted_at)}</p>
                             </div>
-                            <p className="font-semibold text-blue-main">{item.score_points}/{item.max_points} ({item.percentage}%)</p>
+                            <p className="font-semibold text-blue-main">{item.score_points}/{TEN_SCALE_MAX_POINTS} ({item.percentage}%)</p>
                           </div>
                         ))}
                       </div>

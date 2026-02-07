@@ -4,6 +4,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { TEACHER_PLUS_ROLES } from '../../lib/auth.js';
 import { awardBonusPoints } from '../../lib/gradeBonus.js';
 import { badRequest, conflict, forbidden, notFound } from '../../lib/errors.js';
+import { normalizeToTen } from '../../lib/gradingScale.js';
 import { prisma } from '../../lib/prisma.js';
 import {
   serializeTest,
@@ -48,6 +49,8 @@ function parseDueDate(value: string | undefined): Date | undefined {
 function roundTo2(value: number): number {
   return Math.round(value * 100) / 100;
 }
+
+const TEN_SCALE_MAX_POINTS = 10;
 
 function ensureNonEmptyText(value: unknown, detail: string): string {
   if (typeof value !== 'string') {
@@ -875,9 +878,10 @@ const testsRoutes: FastifyPluginAsync = async (fastify) => {
       };
     });
 
-    const scorePoints = normalizedAnswers.reduce((acc, answer) => acc + answer.awarded_points, 0);
-    const maxPoints = test.questions.reduce((acc, question) => acc + question.points, 0);
-    const percentage = maxPoints > 0 ? roundTo2((scorePoints / maxPoints) * 100) : 0;
+    const rawScorePoints = normalizedAnswers.reduce((acc, answer) => acc + answer.awarded_points, 0);
+    const rawMaxPoints = test.questions.reduce((acc, question) => acc + question.points, 0);
+    const scorePoints = normalizeToTen(rawScorePoints, rawMaxPoints);
+    const percentage = rawMaxPoints > 0 ? roundTo2((rawScorePoints / rawMaxPoints) * 100) : 0;
 
     try {
       const { attempt, createdGrade } = await prisma.$transaction(async (tx) => {
@@ -887,7 +891,7 @@ const testsRoutes: FastifyPluginAsync = async (fastify) => {
             student_id: student.id,
             submitted_at: new Date(),
             score_points: scorePoints,
-            max_points: maxPoints,
+            max_points: TEN_SCALE_MAX_POINTS,
             percentage,
             answers: {
               create: normalizedAnswers,
@@ -908,14 +912,14 @@ const testsRoutes: FastifyPluginAsync = async (fastify) => {
           },
         });
 
-        let nextCreatedGrade: { student_id: number; grade_value: number; max_value: number | null } | null = null;
+        let nextCreatedGrade: { student_id: number; percentage: number } | null = null;
 
         if (existingGrade) {
           await tx.grade.update({
             where: { id: existingGrade.id },
             data: {
               grade_value: scorePoints,
-              max_value: maxPoints,
+              max_value: TEN_SCALE_MAX_POINTS,
               comment: `Test result: ${percentage}%`,
               date: new Date(),
               subject_id: test.subject_id,
@@ -929,7 +933,7 @@ const testsRoutes: FastifyPluginAsync = async (fastify) => {
               subject_id: test.subject_id,
               teacher_id: test.teacher_id,
               grade_value: scorePoints,
-              max_value: maxPoints,
+              max_value: TEN_SCALE_MAX_POINTS,
               grade_type: 'Test',
               reference_id: test.id,
               date: new Date(),
@@ -940,8 +944,7 @@ const testsRoutes: FastifyPluginAsync = async (fastify) => {
 
           nextCreatedGrade = {
             student_id: grade.student_id,
-            grade_value: grade.grade_value,
-            max_value: grade.max_value,
+            percentage,
           };
         }
 
@@ -949,7 +952,7 @@ const testsRoutes: FastifyPluginAsync = async (fastify) => {
       });
 
       if (createdGrade) {
-        await awardBonusPoints(createdGrade.student_id, createdGrade.grade_value, createdGrade.max_value ?? maxPoints);
+        await awardBonusPoints(createdGrade.student_id, createdGrade.percentage);
       }
 
       return {
