@@ -4,7 +4,7 @@ export interface Assignment {
   id: number;
   title: string;
   description: string | null;
-  assignment_type: 'individual' | 'group';
+  assignment_type: 'individual' | 'group' | 'INDIVIDUAL' | 'GROUP' | null;
   subject_id: number;
   class_id: number;
   teacher_id: number;
@@ -18,7 +18,7 @@ export interface Assignment {
 export interface AssignmentCreate {
   title: string;
   description?: string;
-  assignment_type?: 'individual' | 'group';
+  assignment_type?: 'individual' | 'group' | 'INDIVIDUAL' | 'GROUP';
   subject_id: number;
   class_id: number;
   due_date: string;

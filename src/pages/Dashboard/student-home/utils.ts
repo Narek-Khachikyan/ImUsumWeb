@@ -12,7 +12,12 @@ const dayIndexMap: Record<number, WeekDayKey | null> = {
 };
 
 const toMinutes = (value: string): number | null => {
-  const [hours, minutes] = value.split(':').map(Number);
+  const parts = value.split(':');
+  if (parts.length < 2) {
+    return null;
+  }
+  const hours = Number(parts[0]);
+  const minutes = Number(parts[1]);
   if (Number.isNaN(hours) || Number.isNaN(minutes)) {
     return null;
   }

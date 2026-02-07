@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import {
   ChooseUsSection,
+  BlogSection,
   FindUsSection,
   MainSection,
   PartnersSection,
@@ -17,6 +18,7 @@ const Home = () => {
       <MainSection />
       <ChooseUsSection />
       <PartnersSection />
+      <BlogSection />
       <FindUsSection />
     </motion.div>
   );

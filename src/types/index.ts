@@ -73,11 +73,11 @@ export interface Partner {
 
 export interface BlogPost {
   id: number;
-  image: string;
+  image: string | null;
   title: string;
   letter: string;
   date: string;
-  hot: boolean;
+  hot: boolean | null;
 }
 
 // Documentation page types
