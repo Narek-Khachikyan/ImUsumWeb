@@ -58,6 +58,7 @@ model Class {
   school      School           @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   schedules   Schedule[]
   students    StudentProfile[]
+  tests       Test[]
 
   @@index([id], map: "ix_classes_id")
   @@map("classes")
@@ -75,6 +76,7 @@ model StudentProfile {
   assignment_submissions AssignmentSubmission[]
   grades                 Grade[]
   purchases              Purchase[]
+  test_attempts          TestAttempt[]
   class_                 Class?                 @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user                   User                   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -92,6 +94,7 @@ model TeacherProfile {
   assignments Assignment[]
   grades      Grade[]
   schedules   Schedule[]
+  tests       Test[]
   user        User             @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   subjects    TeacherSubject[]
 
@@ -109,6 +112,7 @@ model Subject {
   assignments Assignment[]
   grades      Grade[]
   schedules   Schedule[]
+  tests       Test[]
   teachers    TeacherSubject[]
 
   @@index([id], map: "ix_subjects_id")
@@ -207,6 +211,100 @@ model Grade {
 
   @@index([id], map: "ix_grades_id")
   @@map("grades")
+}
+
+model Test {
+  id           Int           @id @default(autoincrement())
+  title        String        @db.VarChar(255)
+  description  String?
+  subject_id   Int
+  class_id     Int
+  teacher_id   Int
+  due_date     DateTime      @db.Timestamp(6)
+  is_published Boolean       @default(false)
+  created_at   DateTime      @default(now()) @db.Timestamp(6)
+  updated_at   DateTime      @updatedAt @db.Timestamp(6)
+  attempts     TestAttempt[]
+  class_       Class         @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  questions    TestQuestion[]
+  subject      Subject       @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teacher      TeacherProfile @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_tests_id")
+  @@index([class_id], map: "ix_tests_class_id")
+  @@index([teacher_id], map: "ix_tests_teacher_id")
+  @@index([subject_id], map: "ix_tests_subject_id")
+  @@map("tests")
+}
+
+model TestQuestion {
+  id            Int          @id @default(autoincrement())
+  test_id       Int
+  question_text String
+  order_index   Int
+  points        Int          @default(1)
+  created_at    DateTime     @default(now()) @db.Timestamp(6)
+  updated_at    DateTime     @updatedAt @db.Timestamp(6)
+  answers       TestAnswer[]
+  options       TestOption[]
+  test          Test         @relation(fields: [test_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_test_questions_id")
+  @@unique([test_id, order_index], map: "uq_test_questions_test_order")
+  @@map("test_questions")
+}
+
+model TestOption {
+  id          Int         @id @default(autoincrement())
+  question_id Int
+  option_text String
+  order_index Int
+  is_correct  Boolean
+  created_at  DateTime    @default(now()) @db.Timestamp(6)
+  updated_at  DateTime    @updatedAt @db.Timestamp(6)
+  answers     TestAnswer[]
+  question    TestQuestion @relation(fields: [question_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_test_options_id")
+  @@unique([question_id, order_index], map: "uq_test_options_question_order")
+  @@map("test_options")
+}
+
+model TestAttempt {
+  id           Int            @id @default(autoincrement())
+  test_id      Int
+  student_id   Int
+  submitted_at DateTime       @default(now()) @db.Timestamp(6)
+  score_points Int
+  max_points   Int
+  percentage   Float
+  created_at   DateTime       @default(now()) @db.Timestamp(6)
+  updated_at   DateTime       @updatedAt @db.Timestamp(6)
+  answers      TestAnswer[]
+  student      StudentProfile @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  test         Test           @relation(fields: [test_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_test_attempts_id")
+  @@unique([test_id, student_id], map: "uq_test_attempts_test_student")
+  @@map("test_attempts")
+}
+
+model TestAnswer {
+  id                 Int          @id @default(autoincrement())
+  attempt_id         Int
+  question_id        Int
+  selected_option_id Int
+  is_correct         Boolean
+  awarded_points     Int
+  created_at         DateTime     @default(now()) @db.Timestamp(6)
+  updated_at         DateTime     @updatedAt @db.Timestamp(6)
+  attempt            TestAttempt  @relation(fields: [attempt_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  question           TestQuestion @relation(fields: [question_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  selected_option    TestOption   @relation(fields: [selected_option_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_test_answers_id")
+  @@unique([attempt_id, question_id], map: "uq_test_answers_attempt_question")
+  @@map("test_answers")
 }
 
 model BlogPost {

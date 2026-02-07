@@ -5,3 +5,4 @@ export * from './scheduleService';
 export * from './assignmentService';
 export * from './gradeService';
 export * from './userService';
+export * from './testService';

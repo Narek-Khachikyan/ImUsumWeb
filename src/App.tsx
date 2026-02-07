@@ -18,6 +18,7 @@ const DashboardLayout = lazy(() => import('./pages/Dashboard/DashboardLayout'));
 const DashboardHome = lazy(() => import('./pages/Dashboard/DashboardHome'));
 const SchedulePage = lazy(() => import('./pages/Dashboard/SchedulePage'));
 const AssignmentsPage = lazy(() => import('./pages/Dashboard/AssignmentsPage'));
+const TestsPage = lazy(() => import('./pages/Dashboard/TestsPage'));
 const GradesPage = lazy(() => import('./pages/Dashboard/GradesPage'));
 const ProfilePage = lazy(() => import('./pages/Dashboard/ProfilePage'));
 const UsersPage = lazy(() => import('./pages/Dashboard/UsersPage'));
@@ -124,6 +125,14 @@ function App() {
           element={
             <Suspense fallback={<PageLoader />}>
               <AssignmentsPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="tests"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <TestsPage />
             </Suspense>
           }
         />

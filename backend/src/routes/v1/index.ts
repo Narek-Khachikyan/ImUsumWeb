@@ -7,6 +7,7 @@ import gradesRoutes from './grades.js';
 import offersRoutes from './offers.js';
 import purchasesRoutes from './purchases.js';
 import schedulesRoutes from './schedules.js';
+import testsRoutes from './tests.js';
 import usersRoutes from './users.js';
 
 const v1Routes: FastifyPluginAsync = async (fastify) => {
@@ -15,6 +16,7 @@ const v1Routes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(blogsRoutes, { prefix: '/blogs' });
   await fastify.register(schedulesRoutes, { prefix: '/schedules' });
   await fastify.register(assignmentsRoutes, { prefix: '/assignments' });
+  await fastify.register(testsRoutes, { prefix: '/tests' });
   await fastify.register(gradesRoutes, { prefix: '/grades' });
   await fastify.register(offersRoutes, { prefix: '/offers' });
   await fastify.register(purchasesRoutes, { prefix: '/purchases' });

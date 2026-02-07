@@ -6,6 +6,11 @@ import type {
   Offer,
   Purchase,
   Schedule,
+  Test,
+  TestAnswer,
+  TestAttempt,
+  TestOption,
+  TestQuestion,
   User,
 } from '@prisma/client';
 
@@ -97,6 +102,81 @@ export function serializeSubmission(
     ...base,
     student_first_name: studentInfo.student_first_name ?? null,
     student_last_name: studentInfo.student_last_name ?? null,
+  };
+}
+
+export function serializeTest(test: Test) {
+  return {
+    id: test.id,
+    title: test.title,
+    description: test.description,
+    subject_id: test.subject_id,
+    class_id: test.class_id,
+    teacher_id: test.teacher_id,
+    due_date: test.due_date.toISOString(),
+    is_published: test.is_published,
+    created_at: test.created_at.toISOString(),
+    updated_at: test.updated_at.toISOString(),
+  };
+}
+
+export function serializeTestOption(option: TestOption, includeCorrect = false) {
+  return {
+    id: option.id,
+    question_id: option.question_id,
+    option_text: option.option_text,
+    order_index: option.order_index,
+    ...(includeCorrect ? { is_correct: option.is_correct } : {}),
+  };
+}
+
+export function serializeTestQuestion(question: TestQuestion) {
+  return {
+    id: question.id,
+    test_id: question.test_id,
+    question_text: question.question_text,
+    order_index: question.order_index,
+    points: question.points,
+    created_at: question.created_at.toISOString(),
+    updated_at: question.updated_at.toISOString(),
+  };
+}
+
+export function serializeTestAttempt(
+  attempt: TestAttempt,
+  studentInfo?: { student_first_name?: string | null; student_last_name?: string | null }
+) {
+  const base = {
+    id: attempt.id,
+    test_id: attempt.test_id,
+    student_id: attempt.student_id,
+    submitted_at: attempt.submitted_at.toISOString(),
+    score_points: attempt.score_points,
+    max_points: attempt.max_points,
+    percentage: attempt.percentage,
+    created_at: attempt.created_at.toISOString(),
+    updated_at: attempt.updated_at.toISOString(),
+  };
+
+  if (!studentInfo) {
+    return base;
+  }
+
+  return {
+    ...base,
+    student_first_name: studentInfo.student_first_name ?? null,
+    student_last_name: studentInfo.student_last_name ?? null,
+  };
+}
+
+export function serializeTestAnswer(answer: TestAnswer) {
+  return {
+    id: answer.id,
+    attempt_id: answer.attempt_id,
+    question_id: answer.question_id,
+    selected_option_id: answer.selected_option_id,
+    is_correct: answer.is_correct,
+    awarded_points: answer.awarded_points,
   };
 }
 

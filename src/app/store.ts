@@ -5,6 +5,7 @@ import scheduleReducer from './slices/scheduleSlice';
 import assignmentReducer from './slices/assignmentSlice';
 import gradeReducer from './slices/gradeSlice';
 import offersReducer from './slices/offersSlice';
+import testReducer from './slices/testSlice';
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     assignment: assignmentReducer,
     grade: gradeReducer,
     offers: offersReducer,
+    test: testReducer,
   },
 });
 
