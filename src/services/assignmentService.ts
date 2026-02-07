@@ -30,6 +30,8 @@ export interface Submission {
   id: number;
   assignment_id: number;
   student_id: number;
+  student_first_name?: string | null;
+  student_last_name?: string | null;
   content: string | null;
   file_url: string | null;
   submitted_at: string | null;
@@ -85,6 +87,11 @@ export const assignmentService = {
 
   async getSubmissions(assignmentId: number): Promise<Submission[]> {
     const response = await api.get<Submission[]>(`/assignments/${assignmentId}/submissions`);
+    return response.data;
+  },
+
+  async getMySubmissions(): Promise<Submission[]> {
+    const response = await api.get<Submission[]>('/assignments/my/submissions');
     return response.data;
   },
 

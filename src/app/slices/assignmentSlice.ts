@@ -13,6 +13,8 @@ interface AssignmentState {
   myAssignments: Assignment[];
   currentAssignment: Assignment | null;
   submissions: Submission[];
+  mySubmissions: Submission[];
+  mySubmissionByAssignmentId: Record<number, Submission>;
   isLoading: boolean;
   error: string | null;
 }
@@ -22,6 +24,8 @@ const initialState: AssignmentState = {
   myAssignments: [],
   currentAssignment: null,
   submissions: [],
+  mySubmissions: [],
+  mySubmissionByAssignmentId: {},
   isLoading: false,
   error: null,
 };
@@ -139,6 +143,20 @@ export const fetchSubmissions = createAsyncThunk(
   }
 );
 
+export const fetchMySubmissions = createAsyncThunk(
+  'assignment/fetchMySubmissions',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await assignmentService.getMySubmissions();
+    } catch (error) {
+      if (error instanceof Error) {
+        return rejectWithValue(error.message);
+      }
+      return rejectWithValue('Failed to fetch submissions');
+    }
+  }
+);
+
 export const gradeSubmission = createAsyncThunk(
   'assignment/gradeSubmission',
   async (
@@ -223,10 +241,52 @@ const assignmentSlice = createSlice({
       .addCase(fetchSubmissions.fulfilled, (state, action) => {
         state.submissions = action.payload;
       })
+      .addCase(fetchMySubmissions.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(fetchMySubmissions.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.mySubmissions = action.payload;
+        state.mySubmissionByAssignmentId = action.payload.reduce<Record<number, Submission>>((acc, submission) => {
+          acc[submission.assignment_id] = submission;
+          return acc;
+        }, {});
+      })
+      .addCase(fetchMySubmissions.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(submitAssignment.fulfilled, (state, action) => {
+        const existingIndex = state.mySubmissions.findIndex((submission) => submission.id === action.payload.id);
+        if (existingIndex === -1) {
+          state.mySubmissions.unshift(action.payload);
+        } else {
+          state.mySubmissions[existingIndex] = action.payload;
+        }
+        state.mySubmissionByAssignmentId[action.payload.assignment_id] = action.payload;
+      })
       .addCase(gradeSubmission.fulfilled, (state, action) => {
         const index = state.submissions.findIndex((s) => s.id === action.payload.id);
         if (index !== -1) {
-          state.submissions[index] = action.payload;
+          state.submissions[index] = {
+            ...state.submissions[index],
+            ...action.payload,
+          };
+        }
+
+        const myIndex = state.mySubmissions.findIndex((submission) => submission.id === action.payload.id);
+        if (myIndex !== -1) {
+          const currentSubmission = state.mySubmissions[myIndex];
+          if (!currentSubmission) {
+            return;
+          }
+
+          const mergedSubmission = {
+            ...currentSubmission,
+            ...action.payload,
+          };
+          state.mySubmissions[myIndex] = mergedSubmission;
+          state.mySubmissionByAssignmentId[action.payload.assignment_id] = mergedSubmission;
         }
       });
   },

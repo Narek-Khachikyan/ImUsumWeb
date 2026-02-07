@@ -39,7 +39,14 @@ const { mockPrisma, requestPasswordReset, resetPasswordWithToken } = vi.hoisted(
     },
     assignmentSubmission: {
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
+    },
+    grade: {
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
     },
     offer: {
       findFirst: vi.fn(),
@@ -88,6 +95,59 @@ function buildUser(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function buildAssignment(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    title: 'Assignment',
+    description: null,
+    assignment_type: 'individual',
+    subject_id: 2,
+    class_id: 1,
+    teacher_id: 1,
+    due_date: new Date('2026-02-10T10:00:00.000Z'),
+    max_points: 100,
+    is_published: true,
+    created_at: now,
+    updated_at: now,
+    ...overrides,
+  };
+}
+
+function buildSubmission(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    assignment_id: 1,
+    student_id: 1,
+    content: 'answer',
+    file_url: null,
+    submitted_at: now,
+    points_earned: null,
+    feedback: null,
+    is_graded: false,
+    created_at: now,
+    updated_at: now,
+    ...overrides,
+  };
+}
+
+function buildGrade(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    student_id: 1,
+    subject_id: 2,
+    teacher_id: 1,
+    grade_value: 95,
+    max_value: 100,
+    grade_type: 'Assignment',
+    reference_id: 1,
+    date: new Date('2026-02-06'),
+    comment: null,
+    created_at: now,
+    updated_at: now,
+    ...overrides,
+  };
+}
+
 describe('API parity', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -103,7 +163,15 @@ describe('API parity', () => {
 
     mockPrisma.blogPost.findMany.mockResolvedValue([]);
     mockPrisma.assignmentSubmission.findFirst.mockResolvedValue(null);
-    mockPrisma.assignment.findUnique.mockResolvedValue({ id: 1 });
+    mockPrisma.assignmentSubmission.findMany.mockResolvedValue([]);
+    mockPrisma.assignmentSubmission.create.mockResolvedValue(buildSubmission());
+    mockPrisma.assignmentSubmission.update.mockResolvedValue(
+      buildSubmission({ points_earned: 10, feedback: 'Checked', is_graded: true })
+    );
+    mockPrisma.assignment.findUnique.mockResolvedValue(buildAssignment());
+    mockPrisma.grade.findFirst.mockResolvedValue(null);
+    mockPrisma.grade.create.mockResolvedValue(buildGrade());
+    mockPrisma.grade.update.mockResolvedValue(buildGrade());
 
     mockPrisma.$queryRaw.mockResolvedValue(undefined);
   });
@@ -520,9 +588,232 @@ describe('API parity', () => {
 
     const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
     mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
-    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1 });
-    mockPrisma.assignment.findUnique.mockResolvedValue({ id: 7 });
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
+    mockPrisma.assignment.findUnique.mockResolvedValue(
+      buildAssignment({ id: 7, class_id: 3, is_published: true, due_date: new Date('2026-02-10T10:00:00.000Z') })
+    );
     mockPrisma.assignmentSubmission.findFirst.mockResolvedValue({ id: 33 });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/assignments/7/submit',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { content: 'my answer' },
+    });
+
+    expect(response.statusCode).toBe(409);
+    expect(response.json().detail).toBe('Already submitted this assignment');
+    await app.close();
+  });
+
+  it('assignment submit after deadline -> 400', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
+    mockPrisma.assignment.findUnique.mockResolvedValue(
+      buildAssignment({ id: 7, class_id: 3, due_date: new Date('2026-02-01T10:00:00.000Z') })
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/assignments/7/submit',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { content: 'late answer' },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().detail).toBe('Assignment submission deadline has passed');
+    await app.close();
+  });
+
+  it('assignment submit unpublished -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
+    mockPrisma.assignment.findUnique.mockResolvedValue(
+      buildAssignment({ id: 7, class_id: 3, is_published: false })
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/assignments/7/submit',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { content: 'answer' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().detail).toBe('Assignment is not published');
+    await app.close();
+  });
+
+  it('assignment submit wrong class -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 4 });
+    mockPrisma.assignment.findUnique.mockResolvedValue(
+      buildAssignment({ id: 7, class_id: 3, is_published: true })
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/assignments/7/submit',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { content: 'answer' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().detail).toBe('Assignment is not available for this class');
+    await app.close();
+  });
+
+  it('student can read own submissions -> 200', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
+    mockPrisma.assignmentSubmission.findMany.mockResolvedValue([
+      buildSubmission({ id: 50, assignment_id: 7, student_id: 10 }),
+    ]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/assignments/my/submissions',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()[0]).toMatchObject({
+      id: 50,
+      assignment_id: 7,
+      student_id: 10,
+    });
+    await app.close();
+  });
+
+  it('teacher cannot view foreign assignment submissions -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
+    mockPrisma.assignment.findUnique.mockResolvedValue(buildAssignment({ id: 7, teacher_id: 99 }));
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/assignments/7/submissions',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(403);
+    await app.close();
+  });
+
+  it('teacher cannot grade foreign assignment submissions -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
+    mockPrisma.assignment.findUnique.mockResolvedValue(buildAssignment({ id: 7, teacher_id: 99, max_points: 20 }));
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/assignments/7/submissions/9',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { points_earned: 15, feedback: 'good' },
+    });
+
+    expect(response.statusCode).toBe(403);
+    await app.close();
+  });
+
+  it('owner teacher grades submission and creates grade -> 200', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
+    mockPrisma.assignment.findUnique.mockResolvedValue(
+      buildAssignment({ id: 7, teacher_id: 11, subject_id: 9, max_points: 20 })
+    );
+    mockPrisma.assignmentSubmission.findFirst.mockResolvedValue(
+      buildSubmission({ id: 9, assignment_id: 7, student_id: 55 })
+    );
+    mockPrisma.assignmentSubmission.update.mockResolvedValue(
+      buildSubmission({
+        id: 9,
+        assignment_id: 7,
+        student_id: 55,
+        points_earned: 18,
+        feedback: 'Great work',
+        is_graded: true,
+      })
+    );
+    mockPrisma.grade.findFirst.mockResolvedValue(null);
+    mockPrisma.grade.create.mockResolvedValue(
+      buildGrade({
+        id: 81,
+        student_id: 55,
+        subject_id: 9,
+        teacher_id: 11,
+        reference_id: 7,
+        grade_value: 18,
+        max_value: 20,
+      })
+    );
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/assignments/7/submissions/9',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { points_earned: 18, feedback: 'Great work' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockPrisma.assignmentSubmission.update).toHaveBeenCalled();
+    expect(mockPrisma.grade.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          student_id: 55,
+          subject_id: 9,
+          teacher_id: 11,
+          reference_id: 7,
+          grade_type: 'Assignment',
+          grade_value: 18,
+          max_value: 20,
+        }),
+      })
+    );
+    expect(mockPrisma.studentProfile.update).toHaveBeenCalledTimes(1);
+    await app.close();
+  });
+
+  it('assignment duplicate submission on unique race -> 409', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
+    mockPrisma.assignment.findUnique.mockResolvedValue(
+      buildAssignment({ id: 7, class_id: 3, is_published: true, due_date: new Date('2026-02-10T10:00:00.000Z') })
+    );
+    mockPrisma.assignmentSubmission.findFirst.mockResolvedValue(null);
+    mockPrisma.assignmentSubmission.create.mockRejectedValue({ code: 'P2002' });
 
     const response = await app.inject({
       method: 'POST',

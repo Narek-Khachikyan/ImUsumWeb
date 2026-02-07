@@ -73,8 +73,11 @@ export function serializeAssignment(assignment: Assignment) {
   };
 }
 
-export function serializeSubmission(submission: AssignmentSubmission) {
-  return {
+export function serializeSubmission(
+  submission: AssignmentSubmission,
+  studentInfo?: { student_first_name?: string | null; student_last_name?: string | null }
+) {
+  const base = {
     id: submission.id,
     assignment_id: submission.assignment_id,
     student_id: submission.student_id,
@@ -84,6 +87,16 @@ export function serializeSubmission(submission: AssignmentSubmission) {
     points_earned: submission.points_earned,
     feedback: submission.feedback,
     is_graded: submission.is_graded,
+  };
+
+  if (!studentInfo) {
+    return base;
+  }
+
+  return {
+    ...base,
+    student_first_name: studentInfo.student_first_name ?? null,
+    student_last_name: studentInfo.student_last_name ?? null,
   };
 }
 

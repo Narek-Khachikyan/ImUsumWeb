@@ -2,37 +2,10 @@ import type { FastifyPluginAsync } from 'fastify';
 
 import { TEACHER_PLUS_ROLES } from '../../lib/auth.js';
 import { badRequest, forbidden, notFound } from '../../lib/errors.js';
+import { awardBonusPoints } from '../../lib/gradeBonus.js';
 import { prisma } from '../../lib/prisma.js';
 import { serializeGrade } from '../../lib/serializers.js';
 import { parseDateOnly } from '../../lib/time.js';
-
-const GRADE_BONUS_THRESHOLDS: Array<{ threshold: number; points: number }> = [
-  { threshold: 90, points: 10 },
-  { threshold: 80, points: 5 },
-  { threshold: 70, points: 2 },
-];
-
-async function awardBonusPoints(studentId: number, gradeValue: number, maxValue: number): Promise<number> {
-  if (maxValue <= 0) {
-    return 0;
-  }
-
-  const percentage = (gradeValue / maxValue) * 100;
-  for (const { threshold, points } of GRADE_BONUS_THRESHOLDS) {
-    if (percentage >= threshold) {
-      await prisma.studentProfile.update({
-        where: { id: studentId },
-        data: {
-          bonus_points: {
-            increment: points,
-          },
-        },
-      });
-      return points;
-    }
-  }
-  return 0;
-}
 
 const gradesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('', { preHandler: [fastify.authenticate] }, async (request) => {
@@ -149,7 +122,7 @@ const gradesRoutes: FastifyPluginAsync = async (fastify) => {
       },
     });
 
-    await awardBonusPoints(grade.student_id, grade.grade_value, grade.max_value);
+    await awardBonusPoints(grade.student_id, grade.grade_value, grade.max_value ?? 100);
     return reply.status(201).send(serializeGrade(grade));
   });
 

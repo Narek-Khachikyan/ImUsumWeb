@@ -184,6 +184,7 @@ model AssignmentSubmission {
   student       StudentProfile @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([id], map: "ix_assignment_submissions_id")
+  @@unique([assignment_id, student_id], map: "uq_assignment_submission_assignment_student")
   @@map("assignment_submissions")
 }
 
