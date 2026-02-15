@@ -186,6 +186,116 @@ describe('TestsPage', () => {
     expect(screen.getByText('80%')).toBeInTheDocument();
   });
 
+  it('student sees personal recommendations in attempt modal', async () => {
+    const listItem = buildListItem({
+      attempt: {
+        id: 301,
+        test_id: 1,
+        student_id: 5,
+        submitted_at: '2026-02-08T10:00:00.000Z',
+        score_points: 7,
+        max_points: 10,
+        percentage: 78,
+        created_at: '2026-02-08T10:00:00.000Z',
+        updated_at: '2026-02-08T10:00:00.000Z',
+      },
+    });
+
+    setState({
+      myTests: [listItem],
+      attempt: {
+        attempt: listItem.attempt!,
+        answers: [
+          {
+            id: 11,
+            attempt_id: 301,
+            question_id: 101,
+            selected_option_id: 501,
+            is_correct: false,
+            awarded_points: 0,
+            question_text: '2 + 2 = ?',
+            selected_option_text: '3',
+            correct_option_text: '4',
+          },
+        ],
+        recommendations: {
+          level: 'good',
+          summary: 'Լավ արդյունք է․ պահպանիր տեմպը և ամրապնդիր դժվար հարցերի թեմաները։',
+          recommended_difficulty: 'medium',
+          action_items: ['Քայլ 1', 'Քայլ 2', 'Քայլ 3'],
+          focus_questions: [
+            {
+              question_id: 101,
+              question_text: '2 + 2 = ?',
+              selected_option_text: '3',
+              correct_option_text: '4',
+              points_lost: 5,
+            },
+          ],
+          subject_context: {
+            average_grade: 7.5,
+            trend: 'up',
+          },
+        },
+      },
+    });
+    mockUseAuth.mockReturnValue({ user: { id: 5, role: 'student' } });
+
+    const user = userEvent.setup();
+    render(<TestsPage />);
+
+    await user.click(screen.getByRole('button', { name: 'Դիտել արդյունքը' }));
+
+    expect(await screen.findByText('Անհատական առաջարկներ')).toBeInTheDocument();
+    expect(screen.getByText('Քայլ 1')).toBeInTheDocument();
+    expect(screen.getAllByText('Ճիշտ պատասխանը: 4').length).toBeGreaterThan(0);
+  });
+
+  it('attempt modal falls back gracefully when recommendations are missing', async () => {
+    const listItem = buildListItem({
+      attempt: {
+        id: 302,
+        test_id: 1,
+        student_id: 5,
+        submitted_at: '2026-02-08T11:00:00.000Z',
+        score_points: 8,
+        max_points: 10,
+        percentage: 80,
+        created_at: '2026-02-08T11:00:00.000Z',
+        updated_at: '2026-02-08T11:00:00.000Z',
+      },
+    });
+
+    setState({
+      myTests: [listItem],
+      attempt: {
+        attempt: listItem.attempt!,
+        answers: [
+          {
+            id: 12,
+            attempt_id: 302,
+            question_id: 102,
+            selected_option_id: 602,
+            is_correct: true,
+            awarded_points: 5,
+            question_text: '3 + 3 = ?',
+            selected_option_text: '6',
+          },
+        ],
+      },
+    });
+    mockUseAuth.mockReturnValue({ user: { id: 5, role: 'student' } });
+
+    const user = userEvent.setup();
+    render(<TestsPage />);
+
+    await user.click(screen.getByRole('button', { name: 'Դիտել արդյունքը' }));
+
+    expect(await screen.findByText('Արդյունք')).toBeInTheDocument();
+    expect(screen.queryByText('Անհատական առաջարկներ')).not.toBeInTheDocument();
+    expect(screen.getByText('Ձեր պատասխանը: 6')).toBeInTheDocument();
+  });
+
   it('teacher creates test from modal', async () => {
     mockUseAuth.mockReturnValue({ user: { id: 1, role: 'teacher' } });
 

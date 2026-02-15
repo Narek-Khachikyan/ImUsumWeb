@@ -20,7 +20,13 @@ import {
 } from '@/app/slices/testSlice';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiErrorMessage } from '@/services/api';
-import type { TestListItem, TestQuestion } from '@/services/testService';
+import type {
+  RecommendationDifficulty,
+  RecommendationLevel,
+  RecommendationTrend,
+  TestListItem,
+  TestQuestion,
+} from '@/services/testService';
 
 interface TestFormState {
   title: string;
@@ -103,6 +109,50 @@ function getTestStatusBadge(test: TestListItem) {
     return { label: 'Փակված', className: 'bg-red-100 text-red-700' };
   }
   return { label: 'Հրապարակված', className: 'bg-green-100 text-green-700' };
+}
+
+function getRecommendationLevelBadge(level: RecommendationLevel) {
+  if (level === 'critical') {
+    return { label: 'Կրիտիկական', className: 'bg-red-100 text-red-700' };
+  }
+
+  if (level === 'improving') {
+    return { label: 'Ամրապնդման փուլ', className: 'bg-amber-100 text-amber-700' };
+  }
+
+  if (level === 'good') {
+    return { label: 'Լավ', className: 'bg-blue-100 text-blue-700' };
+  }
+
+  return { label: 'Գերազանց', className: 'bg-green-100 text-green-700' };
+}
+
+function getDifficultyLabel(difficulty: RecommendationDifficulty) {
+  if (difficulty === 'easy') {
+    return 'Թեթև';
+  }
+
+  if (difficulty === 'medium') {
+    return 'Միջին';
+  }
+
+  return 'Բարդ';
+}
+
+function getTrendLabel(trend: RecommendationTrend) {
+  if (trend === 'up') {
+    return 'Աճող';
+  }
+
+  if (trend === 'down') {
+    return 'Նվազող';
+  }
+
+  if (trend === 'stable') {
+    return 'Կայուն';
+  }
+
+  return 'Տվյալները քիչ են';
 }
 
 export default function TestsPage() {
@@ -876,11 +926,75 @@ export default function TestsPage() {
                 <p className="text-sm text-green-700">{attempt.attempt.percentage}%</p>
               </div>
 
+              {attempt.recommendations && (
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="font-semibold text-blue-900">Անհատական առաջարկներ</h4>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getRecommendationLevelBadge(attempt.recommendations.level).className}`}>
+                      {getRecommendationLevelBadge(attempt.recommendations.level).label}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-blue-900">{attempt.recommendations.summary}</p>
+
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <div className="rounded-lg bg-white/70 px-3 py-2">
+                      <p className="text-xs text-gray-500">Հաջորդ բարդություն</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {getDifficultyLabel(attempt.recommendations.recommended_difficulty)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-white/70 px-3 py-2">
+                      <p className="text-xs text-gray-500">Առարկայի միջին</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {attempt.recommendations.subject_context.average_grade ?? '—'}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-white/70 px-3 py-2">
+                      <p className="text-xs text-gray-500">Միտում</p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {getTrendLabel(attempt.recommendations.subject_context.trend)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-900">Հաջորդ քայլեր</p>
+                    <ul className="space-y-1 text-sm text-gray-700 list-disc list-inside">
+                      {attempt.recommendations.action_items.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-gray-900">Ուշադրության հարցեր</p>
+                    {attempt.recommendations.focus_questions.length > 0 ? (
+                      <div className="space-y-2">
+                        {attempt.recommendations.focus_questions.map((item) => (
+                          <div key={item.question_id} className="rounded-lg border border-blue-100 bg-white px-3 py-2">
+                            <p className="text-sm font-medium text-gray-900">{item.question_text}</p>
+                            <p className="mt-1 text-xs text-gray-600">Ձեր պատասխանը: {item.selected_option_text}</p>
+                            <p className="text-xs text-gray-600">Ճիշտ պատասխանը: {item.correct_option_text}</p>
+                            <p className="text-xs text-red-700">Կորցրած միավոր: {item.points_lost}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-600">Այս փորձում ուշադրության հատուկ հարցեր չկան։</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3">
                 {attempt.answers.map((answer) => (
                   <div key={answer.id} className="rounded-lg border border-gray-200 p-3">
                     <p className="text-sm font-medium text-gray-900">{answer.question_text ?? `Հարց #${answer.question_id}`}</p>
                     <p className="text-sm text-gray-700 mt-1">Ձեր պատասխանը: {answer.selected_option_text ?? '—'}</p>
+                    {!answer.is_correct && answer.correct_option_text && (
+                      <p className="text-sm text-gray-700 mt-1">Ճիշտ պատասխանը: {answer.correct_option_text}</p>
+                    )}
                     <p className={`text-sm mt-1 ${answer.is_correct ? 'text-green-700' : 'text-red-700'}`}>
                       {answer.is_correct ? 'Ճիշտ' : 'Սխալ'} • +{answer.awarded_points}
                     </p>

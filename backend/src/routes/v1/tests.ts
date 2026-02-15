@@ -1,4 +1,4 @@
-import { Prisma, type Test, type User, type UserRole } from '@prisma/client';
+import { Prisma, type Test, type User } from '@prisma/client';
 import type { FastifyPluginAsync } from 'fastify';
 
 import { TEACHER_PLUS_ROLES } from '../../lib/auth.js';
@@ -13,6 +13,7 @@ import {
   serializeTestOption,
   serializeTestQuestion,
 } from '../../lib/serializers.js';
+import { buildTestAttemptRecommendation } from '../../services/testRecommendationsService.js';
 
 function parsePositiveInt(value: string, detail: string): number {
   const parsed = Number(value);
@@ -1006,6 +1007,16 @@ const testsRoutes: FastifyPluginAsync = async (fastify) => {
             question: {
               select: {
                 question_text: true,
+                points: true,
+                options: {
+                  where: {
+                    is_correct: true,
+                  },
+                  select: {
+                    option_text: true,
+                  },
+                  take: 1,
+                },
               },
             },
             selected_option: {
@@ -1025,13 +1036,35 @@ const testsRoutes: FastifyPluginAsync = async (fastify) => {
       notFound('Test attempt not found');
     }
 
-    return {
-      attempt: serializeTestAttempt(attempt),
-      answers: attempt.answers.map((answer) => ({
+    const serializedAnswers = attempt.answers.map((answer) => {
+      const correctOptionText = answer.question.options[0]?.option_text ?? '—';
+
+      return {
         ...serializeTestAnswer(answer),
         question_text: answer.question.question_text,
         selected_option_text: answer.selected_option.option_text,
+        correct_option_text: correctOptionText,
+      };
+    });
+
+    const recommendations = await buildTestAttemptRecommendation({
+      percentage: attempt.percentage,
+      subject_id: test.subject_id,
+      student_id: student.id,
+      answers: attempt.answers.map((answer) => ({
+        question_id: answer.question_id,
+        question_text: answer.question.question_text,
+        selected_option_text: answer.selected_option.option_text,
+        correct_option_text: answer.question.options[0]?.option_text ?? '—',
+        is_correct: answer.is_correct,
+        points_lost: Math.max(answer.question.points - answer.awarded_points, 0),
       })),
+    });
+
+    return {
+      attempt: serializeTestAttempt(attempt),
+      answers: serializedAnswers,
+      recommendations,
     };
   });
 

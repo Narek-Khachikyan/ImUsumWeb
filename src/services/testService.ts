@@ -42,6 +42,29 @@ export interface TestAnswer {
   awarded_points: number;
   question_text?: string;
   selected_option_text?: string;
+  correct_option_text?: string;
+}
+
+export type RecommendationLevel = 'critical' | 'improving' | 'good' | 'excellent';
+export type RecommendationDifficulty = 'easy' | 'medium' | 'hard';
+export type RecommendationTrend = 'up' | 'down' | 'stable' | 'insufficient_data';
+
+export interface TestAttemptRecommendation {
+  level: RecommendationLevel;
+  summary: string;
+  recommended_difficulty: RecommendationDifficulty;
+  action_items: string[];
+  focus_questions: Array<{
+    question_id: number;
+    question_text: string;
+    selected_option_text: string;
+    correct_option_text: string;
+    points_lost: number;
+  }>;
+  subject_context: {
+    average_grade: number | null;
+    trend: RecommendationTrend;
+  };
 }
 
 export interface TestListItem {
@@ -135,6 +158,7 @@ export interface TestSubmitResponse {
 export interface TestAttemptResponse {
   attempt: TestAttempt;
   answers: TestAnswer[];
+  recommendations?: TestAttemptRecommendation;
 }
 
 export interface TestAnalytics {

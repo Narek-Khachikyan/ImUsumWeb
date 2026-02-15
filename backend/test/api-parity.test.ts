@@ -50,6 +50,7 @@ const { mockPrisma, requestPasswordReset, resetPasswordWithToken } = vi.hoisted(
     grade: {
       findUnique: vi.fn(),
       findFirst: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
     },
@@ -268,6 +269,7 @@ describe('API parity', () => {
     mockPrisma.assignment.findUnique.mockResolvedValue(buildAssignment());
     mockPrisma.grade.findUnique.mockResolvedValue(buildGrade());
     mockPrisma.grade.findFirst.mockResolvedValue(null);
+    mockPrisma.grade.findMany.mockResolvedValue([]);
     mockPrisma.grade.create.mockResolvedValue(buildGrade());
     mockPrisma.grade.update.mockResolvedValue(buildGrade());
     mockPrisma.test.findUnique.mockResolvedValue(buildTest());
@@ -1394,6 +1396,188 @@ describe('API parity', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json().detail).toBe('Test submission deadline has passed');
+    await app.close();
+  });
+
+  it('student attempt includes recommendations payload -> 200', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 1 });
+    mockPrisma.test.findUnique.mockResolvedValue(buildTest({ id: 7, class_id: 1, subject_id: 2, is_published: true }));
+    mockPrisma.testAttempt.findUnique.mockResolvedValue({
+      ...buildTestAttempt({ id: 700, test_id: 7, student_id: 10, score_points: 8, percentage: 78 }),
+      answers: [
+        {
+          id: 901,
+          attempt_id: 700,
+          question_id: 101,
+          selected_option_id: 501,
+          is_correct: false,
+          awarded_points: 0,
+          created_at: now,
+          updated_at: now,
+          question: {
+            question_text: '2 + 2 = ?',
+            points: 5,
+            options: [{ option_text: '4' }],
+          },
+          selected_option: {
+            option_text: '3',
+          },
+        },
+        {
+          id: 902,
+          attempt_id: 700,
+          question_id: 102,
+          selected_option_id: 601,
+          is_correct: true,
+          awarded_points: 5,
+          created_at: now,
+          updated_at: now,
+          question: {
+            question_text: '3 + 3 = ?',
+            points: 5,
+            options: [{ option_text: '6' }],
+          },
+          selected_option: {
+            option_text: '6',
+          },
+        },
+      ],
+    });
+    mockPrisma.grade.findMany.mockResolvedValue([
+      { grade_value: 8 },
+      { grade_value: 8 },
+      { grade_value: 7 },
+      { grade_value: 6 },
+    ]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/tests/7/attempt',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().recommendations).toMatchObject({
+      level: 'good',
+      recommended_difficulty: 'medium',
+      subject_context: {
+        trend: 'up',
+      },
+    });
+    expect(response.json().recommendations.action_items).toHaveLength(3);
+    expect(response.json().answers[0]).toMatchObject({
+      question_id: 101,
+      selected_option_text: '3',
+      correct_option_text: '4',
+    });
+    await app.close();
+  });
+
+  it('student attempt recommendations trend insufficient_data when grade history is short -> 200', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 1 });
+    mockPrisma.test.findUnique.mockResolvedValue(buildTest({ id: 7, class_id: 1, subject_id: 2, is_published: true }));
+    mockPrisma.testAttempt.findUnique.mockResolvedValue({
+      ...buildTestAttempt({ id: 701, test_id: 7, student_id: 10, score_points: 4, percentage: 40 }),
+      answers: [
+        {
+          id: 903,
+          attempt_id: 701,
+          question_id: 101,
+          selected_option_id: 501,
+          is_correct: false,
+          awarded_points: 0,
+          created_at: now,
+          updated_at: now,
+          question: {
+            question_text: '2 + 2 = ?',
+            points: 5,
+            options: [{ option_text: '4' }],
+          },
+          selected_option: {
+            option_text: '3',
+          },
+        },
+      ],
+    });
+    mockPrisma.grade.findMany.mockResolvedValue([{ grade_value: 5 }, { grade_value: 6 }]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/tests/7/attempt',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().recommendations).toMatchObject({
+      level: 'critical',
+      recommended_difficulty: 'easy',
+      subject_context: {
+        trend: 'insufficient_data',
+      },
+    });
+    await app.close();
+  });
+
+  it('student attempt recommendations are excellent for high score -> 200', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 1 });
+    mockPrisma.test.findUnique.mockResolvedValue(buildTest({ id: 7, class_id: 1, subject_id: 2, is_published: true }));
+    mockPrisma.testAttempt.findUnique.mockResolvedValue({
+      ...buildTestAttempt({ id: 702, test_id: 7, student_id: 10, score_points: 9, percentage: 92 }),
+      answers: [
+        {
+          id: 904,
+          attempt_id: 702,
+          question_id: 101,
+          selected_option_id: 502,
+          is_correct: true,
+          awarded_points: 5,
+          created_at: now,
+          updated_at: now,
+          question: {
+            question_text: '2 + 2 = ?',
+            points: 5,
+            options: [{ option_text: '4' }],
+          },
+          selected_option: {
+            option_text: '4',
+          },
+        },
+      ],
+    });
+    mockPrisma.grade.findMany.mockResolvedValue([
+      { grade_value: 9 },
+      { grade_value: 9 },
+      { grade_value: 8 },
+      { grade_value: 8 },
+    ]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/tests/7/attempt',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().recommendations).toMatchObject({
+      level: 'excellent',
+      recommended_difficulty: 'hard',
+    });
+    expect(response.json().recommendations.focus_questions).toEqual([]);
     await app.close();
   });
 
