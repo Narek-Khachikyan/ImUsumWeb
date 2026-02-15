@@ -1,5 +1,5 @@
 import cn from 'classnames';
-import logo from '../../../assets/logo.svg';
+import logo from '@/assets/logo.svg';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 

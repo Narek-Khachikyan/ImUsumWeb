@@ -1,6 +1,6 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
-import generalImg from '../../../../assets/homeImg1.svg';
+import generalImg from '@/assets/homeImg1.svg';
 
 const MainSection = () => {
    const sectionRef = useRef<HTMLElement>(null);

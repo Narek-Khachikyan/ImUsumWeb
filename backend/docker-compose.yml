@@ -1,9 +1,6 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
-    container_name: imusum_db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -20,7 +17,6 @@ services:
 
   api:
     build: .
-    container_name: imusum_api
     ports:
       - "8000:8000"
     environment:

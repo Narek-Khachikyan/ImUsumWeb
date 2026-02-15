@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import Title from '@/components/ui/Title';
 import { blogService } from '@/services/blogService';
 import type { BlogPost } from '@/types';
-import { blog as fallbackBlogPosts } from '../../constants';
+import { blog as fallbackBlogPosts } from '@/features/home/constants';
 import blogImg1 from '@/assets/blogImg1.webp';
 import BlogCard from './BlogCard';
 

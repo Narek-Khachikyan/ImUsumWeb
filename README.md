@@ -4,6 +4,10 @@ React + TypeScript frontend with a Node/Fastify + Prisma backend.
 
 ## Quick Start (Harness)
 
+Prerequisites:
+- Node.js 20+
+- Docker Desktop
+
 1. Install dependencies:
 ```bash
 npm install
@@ -22,6 +26,8 @@ npm run harness:doctor
 npm run harness:up
 npm run harness:smoke
 ```
+
+`harness:up` now applies Prisma migrations automatically (set `HARNESS_SKIP_MIGRATIONS=1` to skip).
 
 4. Open services:
 - Frontend: `http://localhost:5173`

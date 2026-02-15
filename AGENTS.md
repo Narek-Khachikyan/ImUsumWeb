@@ -1,5 +1,12 @@
 # ImUsumWeb Agent Guide
 
+## Table of Contents
+- [Source of Truth](#source-of-truth)
+- [Required Context Docs](#required-context-docs)
+- [Harness Commands](#harness-commands)
+- [Quality Gates](#quality-gates)
+- [Execution Rules](#execution-rules)
+
 ## Source of Truth
 - Frontend: React + TypeScript in `src/`.
 - Backend: Node.js + Fastify + Prisma in `backend/`.

@@ -138,7 +138,7 @@ function buildAssignment(overrides: Record<string, unknown> = {}) {
     subject_id: 2,
     class_id: 1,
     teacher_id: 1,
-    due_date: new Date('2026-02-10T10:00:00.000Z'),
+    due_date: new Date('2099-02-10T10:00:00.000Z'),
     max_points: 10,
     is_published: true,
     created_at: now,
@@ -190,7 +190,7 @@ function buildTest(overrides: Record<string, unknown> = {}) {
     subject_id: 2,
     class_id: 1,
     teacher_id: 1,
-    due_date: new Date('2026-02-20T10:00:00.000Z'),
+    due_date: new Date('2099-02-20T10:00:00.000Z'),
     is_published: true,
     created_at: now,
     updated_at: now,
@@ -698,7 +698,7 @@ describe('API parity', () => {
     mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
     mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
     mockPrisma.assignment.findUnique.mockResolvedValue(
-      buildAssignment({ id: 7, class_id: 3, is_published: true, due_date: new Date('2026-02-10T10:00:00.000Z') })
+      buildAssignment({ id: 7, class_id: 3, is_published: true, due_date: new Date('2099-02-10T10:00:00.000Z') })
     );
     mockPrisma.assignmentSubmission.findFirst.mockResolvedValue({ id: 33 });
 
@@ -1169,7 +1169,7 @@ describe('API parity', () => {
     mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
     mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
     mockPrisma.assignment.findUnique.mockResolvedValue(
-      buildAssignment({ id: 7, class_id: 3, is_published: true, due_date: new Date('2026-02-10T10:00:00.000Z') })
+      buildAssignment({ id: 7, class_id: 3, is_published: true, due_date: new Date('2099-02-10T10:00:00.000Z') })
     );
     mockPrisma.assignmentSubmission.findFirst.mockResolvedValue(null);
     mockPrisma.assignmentSubmission.create.mockRejectedValue({ code: 'P2002' });

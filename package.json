@@ -13,7 +13,15 @@
     "test:coverage": "vitest --coverage",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css}\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "harness:doctor": "bash scripts/harness/doctor.sh",
+    "harness:up": "bash scripts/harness/up.sh",
+    "harness:down": "bash scripts/harness/down.sh",
+    "harness:smoke": "bash scripts/harness/smoke.sh",
+    "harness:logs": "bash scripts/harness/logs.sh",
+    "check:guardrails": "node scripts/guardrails/frontend-structure.mjs && node scripts/guardrails/backend-structure.mjs && node scripts/guardrails/agents-docs-check.mjs",
+    "check:harness": "npm run harness:doctor && npm run harness:up && npm run harness:smoke && npm run harness:down",
+    "check:all": "npm run type-check && npm run test -- --run src/test && npm run check:guardrails && (cd backend && npm run check:guardrails)"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

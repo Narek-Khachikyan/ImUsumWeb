@@ -7,6 +7,7 @@ import Fastify from 'fastify';
 import { env } from './config/env.js';
 import { ApiError } from './lib/errors.js';
 import authPlugin from './plugins/auth.js';
+import metricsPlugin from './plugins/metrics.js';
 import v1Routes from './routes/v1/index.js';
 
 function isDatabaseUnavailableError(error: unknown): boolean {
@@ -41,6 +42,9 @@ export function buildApp() {
     keyGenerator: (request) => request.ip,
   });
 
+  if (process.env.NODE_ENV !== 'test' && process.env.VITEST !== 'true') {
+    app.register(metricsPlugin);
+  }
   app.register(authPlugin);
 
   app.setErrorHandler((error, _request, reply) => {

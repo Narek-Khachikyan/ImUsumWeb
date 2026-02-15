@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "type-check": "tsc --noEmit",
+    "check:guardrails": "node ../scripts/guardrails/backend-structure.mjs",
     "db:up": "docker-compose up -d db",
     "db:down": "docker-compose down",
     "prisma:generate": "prisma generate",
@@ -31,6 +32,7 @@
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.5",
     "fastify": "^5.2.1",
+    "fastify-metrics": "^12.1.0",
     "fastify-plugin": "^5.0.1",
     "nodemailer": "^6.9.15"
   },

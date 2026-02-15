@@ -1,9 +1,9 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
-import findUsPhone from '../../../../assets/findUsPhones.png';
-import googlePlay from '../../../../assets/googlePlay.webp';
-import appStore from '../../../../assets/appStore.webp';
-import Title from '../../../../components/ui/Title';
+import appStore from '@/assets/appStore.webp';
+import findUsPhone from '@/assets/findUsPhones.png';
+import googlePlay from '@/assets/googlePlay.webp';
+import Title from '@/components/ui/Title';
 
 const FindUsSection = () => {
    const sectionRef = useRef<HTMLElement>(null);

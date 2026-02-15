@@ -2,13 +2,13 @@
 //IMG-in Jamanakavor dzeva, minchev chgna sax backend!!!
 //IMG-in Jamanakavor dzeva, minchev chgna sax backend!!!
 
-import type { ChooseUsCard, Partner, BlogPost } from '../../types';
-import img from '../../assets/choosUsCardImg1.png';
-import nike from '../../assets/nikeLogo.png';
-import coffeHouse from '../../assets/coffeHouseLogo.png';
-import blogImg1 from '../../assets/blogImg1.webp';
-import blogImg2 from '../../assets/blogImg2.webp';
-import blogImg3 from '../../assets/blogImg3.webp';
+import blogImg1 from '@/assets/blogImg1.webp';
+import blogImg2 from '@/assets/blogImg2.webp';
+import blogImg3 from '@/assets/blogImg3.webp';
+import img from '@/assets/choosUsCardImg1.png';
+import coffeHouse from '@/assets/coffeHouseLogo.png';
+import nike from '@/assets/nikeLogo.png';
+import type { BlogPost, ChooseUsCard, Partner } from '@/types';
 
 export const chooseUsCardData: ChooseUsCard[] = [
    {

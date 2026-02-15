@@ -1,8 +1,8 @@
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
 import { motion } from 'framer-motion';
-import Title from '../../../../components/ui/Title';
-import { partners } from '../../constants';
+import Title from '@/components/ui/Title';
+import { partners } from '@/features/home/constants';
 import PartnersCard from './PartnersCard';
 
 import 'swiper/css';

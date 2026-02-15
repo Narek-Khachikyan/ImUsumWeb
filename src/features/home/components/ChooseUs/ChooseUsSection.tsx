@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import Title from '../../../../components/ui/Title';
+import Title from '@/components/ui/Title';
 import ChooseUsCard from './ChooseUsCard';
-import { chooseUsCardData } from '../../constants';
+import { chooseUsCardData } from '@/features/home/constants';
 
 const ChooseUsSection = () => {
    const containerVariants = {

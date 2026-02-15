@@ -5,7 +5,7 @@ import {
   FindUsSection,
   MainSection,
   PartnersSection,
-} from '../../features/home';
+} from '@/features/home';
 
 const Home = () => {
   return (
