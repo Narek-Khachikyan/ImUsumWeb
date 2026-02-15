@@ -111,6 +111,20 @@ const navItems: NavItem[] = [
       ),
    },
    {
+      name: 'Աշխատանքներ',
+      path: '/dashboard/jobs',
+      icon: (
+         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+               strokeLinecap="round"
+               strokeLinejoin="round"
+               strokeWidth={2}
+               d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m8 0H8m8 0h3a2 2 0 012 2v6.5M8 6H5a2 2 0 00-2 2v6.5m0 0A24.23 24.23 0 0012 17c3.14 0 6.14-.6 9-1.5M3 14.5V19a2 2 0 002 2h14a2 2 0 002-2v-4.5"
+            />
+         </svg>
+      ),
+   },
+   {
       name: 'Իմ գնումները',
       path: '/dashboard/my-purchases',
       icon: (

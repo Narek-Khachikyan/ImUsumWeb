@@ -115,3 +115,79 @@
 - `npm run check:all`
 - `cd backend && npm run check:guardrails && npm run test`
 - `npm run check:harness`
+
+## 2026-02-15: Core Modules Gap Closure (Attendance + AI + Jobs + Targeted Assignments + Student Home Data)
+
+### Summary
+- Close five product-critical gaps in one coordinated release:
+- Geolocation-based attendance workflow.
+- AI workflow with human confirmation (test drafts, recommendations, schedule optimization drafts).
+- Dedicated jobs module for top students (without replacing offers marketplace).
+- Assignment targeting beyond class-level (groups and individual students).
+- Student home data from real backend sources instead of local mocks.
+
+### Scope
+- In scope:
+- New backend modules: `attendance`, `ai`, `jobs`, `assignment-groups`.
+- Prisma schema additions and migration/backfill for attendance, workflows, jobs, and assignment targeting.
+- Frontend data and UI integrations for student-home announcements/discounts, jobs page, assignment targeting, attendance check-in, and AI draft actions.
+- Backend and frontend tests for the new flows.
+- Out of scope:
+- Fully autonomous AI apply flows without human confirmation.
+- Removing or redesigning existing offers/purchases marketplace.
+
+### Interfaces And API Changes
+- New API modules:
+- `/api/v1/attendance/*`
+- `/api/v1/ai/*`
+- `/api/v1/jobs/*`
+- `/api/v1/assignment-groups/*`
+- Extended assignment contracts with targeting fields:
+- `target_scope`
+- `target_group_ids`
+- `target_student_ids`
+- Extended test attempt contract with recommendation source:
+- `recommendations_source: "ai" | "rule_based"`
+- New env configuration:
+- `GEOLOCATION_CHECKIN_BEFORE_MINUTES`
+- `GEOLOCATION_CHECKIN_AFTER_MINUTES`
+- `BEST_STUDENT_GRADE_THRESHOLD`
+- `BEST_STUDENT_LOOKBACK_DAYS`
+- `BEST_STUDENT_MIN_GRADES`
+
+### Key Decisions
+- Jobs module is separate from offers; both are kept.
+- Geolocation attendance uses lesson-bound check-in with `-15/+20` minute window and school radius checks.
+- AI outputs are drafts first; apply requires explicit user action.
+- Top-student eligibility defaults:
+- average grade `>= 8.0`
+- lookback period `90` days
+- minimum `3` grades
+- manual eligibility override has higher priority.
+- Student home uses existing backend modules:
+- announcements from `blogs`
+- discount cards from active `offers`
+- Assignment targeting modes:
+- `CLASS`, `GROUPS`, `STUDENTS`.
+
+### Risks And Mitigations
+- Risk: geolocation/browser permission variance.
+- Mitigation: add explicit fallback manual check-in action and clear user feedback.
+- Risk: AI latency/failures.
+- Mitigation: safe fallback to rule-based recommendations and never fail request if AI fails.
+- Risk: migration complexity and backward compatibility.
+- Mitigation: additive schema with default/backfill behavior for existing assignments.
+- Risk: assignment visibility regressions.
+- Mitigation: route-level authorization filters + targeted API parity tests for each scope mode.
+
+### Validation Plan
+- `npm run check:all`
+- `cd backend && npm run check:guardrails && npm run test`
+- `npm run check:harness`
+
+### Acceptance Criteria
+- Attendance check-in and class attendance journal function with geolocation radius and time-window policy.
+- AI draft endpoints are available and integrated into tests/schedule frontend workflows with explicit apply steps.
+- Jobs module supports eligibility checks, overrides, postings, and applications with role-based permissions.
+- Assignments support class/group/student targeting and preserve old records as class-targeted.
+- Student home announcements/discounts are fetched from backend APIs, with robust empty/error states.

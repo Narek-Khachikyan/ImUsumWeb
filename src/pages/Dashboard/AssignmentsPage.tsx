@@ -12,12 +12,22 @@ import {
 } from '@/app/slices/assignmentSlice';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiErrorMessage } from '@/services/api';
-import type { Assignment, AssignmentCreate, Submission } from '@/services/assignmentService';
+import {
+  assignmentService,
+  type Assignment,
+  type AssignmentCreate,
+  type AssignmentTargetingOptions,
+  type AssignmentTargetScope,
+  type Submission,
+} from '@/services/assignmentService';
 
 interface AssignmentFormState {
   title: string;
   description: string;
   assignment_type: 'individual' | 'group';
+  target_scope: AssignmentTargetScope;
+  target_group_ids: number[];
+  target_student_ids: number[];
   subject_id: string;
   class_id: string;
   due_date: string;
@@ -72,6 +82,9 @@ function getInitialFormState(): AssignmentFormState {
     title: '',
     description: '',
     assignment_type: 'individual',
+    target_scope: 'CLASS',
+    target_group_ids: [],
+    target_student_ids: [],
     subject_id: '',
     class_id: '',
     due_date: getDefaultDueDateValue(),
@@ -124,6 +137,16 @@ function getStatusBadge(status: StudentSubmissionStatus) {
   return { label: 'Չհանձնված', className: 'bg-gray-100 text-gray-700' };
 }
 
+function getTargetScopeLabel(scope: AssignmentTargetScope) {
+  if (scope === 'GROUPS') {
+    return 'Թիրախ: Խմբեր';
+  }
+  if (scope === 'STUDENTS') {
+    return 'Թիրախ: Աշակերտներ';
+  }
+  return 'Թիրախ: Դասարան';
+}
+
 export default function AssignmentsPage() {
   const dispatch = useAppDispatch();
   const { user } = useAuth();
@@ -151,10 +174,16 @@ export default function AssignmentsPage() {
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewForms, setReviewForms] = useState<Record<number, ReviewFormState>>({});
   const [gradingSubmissionId, setGradingSubmissionId] = useState<number | null>(null);
+  const [targetingOptions, setTargetingOptions] = useState<AssignmentTargetingOptions>({
+    groups: [],
+    students: [],
+  });
+  const [isLoadingTargetingOptions, setIsLoadingTargetingOptions] = useState(false);
+  const [targetingOptionsError, setTargetingOptionsError] = useState<string | null>(null);
 
   const isStudent = user?.role === 'student';
   const canManageAssignments = user?.role === 'teacher' || user?.role === 'director' || user?.role === 'admin';
-  const canCreateAssignments = user?.role === 'teacher';
+  const canCreateAssignments = canManageAssignments;
   const canReviewAssignments = canManageAssignments;
 
   useEffect(() => {
@@ -188,6 +217,48 @@ export default function AssignmentsPage() {
     });
   }, [reviewingAssignment, submissions]);
 
+  useEffect(() => {
+    if (!isModalOpen || !canManageAssignments) {
+      return;
+    }
+
+    const classId = Number(formState.class_id);
+    if (!Number.isInteger(classId) || classId <= 0) {
+      setTargetingOptions({ groups: [], students: [] });
+      setTargetingOptionsError(null);
+      return;
+    }
+
+    let isCancelled = false;
+    const load = async () => {
+      setIsLoadingTargetingOptions(true);
+      setTargetingOptionsError(null);
+      try {
+        const payload = await assignmentService.getTargetingOptions(classId);
+        if (isCancelled) {
+          return;
+        }
+        setTargetingOptions(payload);
+      } catch (error) {
+        if (isCancelled) {
+          return;
+        }
+        setTargetingOptions({ groups: [], students: [] });
+        setTargetingOptionsError(resolveErrorMessage(error, 'Չհաջողվեց բեռնել թիրախավորման տարբերակները'));
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingTargetingOptions(false);
+        }
+      }
+    };
+
+    void load();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [canManageAssignments, formState.class_id, isModalOpen]);
+
   const { upcoming, past } = useMemo(() => {
     const now = new Date();
     return {
@@ -200,6 +271,8 @@ export default function AssignmentsPage() {
     setEditingAssignment(null);
     setFormState(getInitialFormState());
     setModalError(null);
+    setTargetingOptions({ groups: [], students: [] });
+    setTargetingOptionsError(null);
     setIsModalOpen(true);
   };
 
@@ -209,6 +282,9 @@ export default function AssignmentsPage() {
       title: assignment.title,
       description: assignment.description ?? '',
       assignment_type: isGroupAssignmentType(assignment.assignment_type) ? 'group' : 'individual',
+      target_scope: assignment.target_scope,
+      target_group_ids: assignment.target_group_ids ?? [],
+      target_student_ids: assignment.target_student_ids ?? [],
       subject_id: String(assignment.subject_id),
       class_id: String(assignment.class_id),
       due_date: formatDateTimeLocal(assignment.due_date),
@@ -216,6 +292,7 @@ export default function AssignmentsPage() {
       is_published: assignment.is_published,
     });
     setModalError(null);
+    setTargetingOptionsError(null);
     setIsModalOpen(true);
   };
 
@@ -223,6 +300,8 @@ export default function AssignmentsPage() {
     setIsModalOpen(false);
     setEditingAssignment(null);
     setModalError(null);
+    setTargetingOptions({ groups: [], students: [] });
+    setTargetingOptionsError(null);
   };
 
   const openSubmissionModal = (assignment: Assignment) => {
@@ -311,10 +390,26 @@ export default function AssignmentsPage() {
     const description = formState.description.trim();
     const assignmentType = toApiAssignmentType(formState.assignment_type);
     const descriptionPayload = description ? { description } : { description: '' };
+    const targetScope = formState.target_scope;
+    const targetGroupIds = formState.target_group_ids;
+    const targetStudentIds = formState.target_student_ids;
+
+    if (targetScope === 'GROUPS' && targetGroupIds.length === 0) {
+      setModalError('GROUPS թիրախավորման համար ընտրեք առնվազն մեկ խումբ');
+      return;
+    }
+
+    if (targetScope === 'STUDENTS' && targetStudentIds.length === 0) {
+      setModalError('STUDENTS թիրախավորման համար ընտրեք առնվազն մեկ աշակերտ');
+      return;
+    }
 
     const updatePayload: Partial<AssignmentCreate> = {
       title: trimmedTitle,
       assignment_type: assignmentType,
+      target_scope: targetScope,
+      target_group_ids: targetScope === 'GROUPS' ? targetGroupIds : [],
+      target_student_ids: targetScope === 'STUDENTS' ? targetStudentIds : [],
       due_date: dueDate.toISOString(),
       max_points: TEN_SCALE_MAX_POINTS,
       is_published: formState.is_published,
@@ -338,6 +433,9 @@ export default function AssignmentsPage() {
       createPayload = {
         title: trimmedTitle,
         assignment_type: assignmentType,
+        target_scope: targetScope,
+        target_group_ids: targetScope === 'GROUPS' ? targetGroupIds : [],
+        target_student_ids: targetScope === 'STUDENTS' ? targetStudentIds : [],
         subject_id: subjectId,
         class_id: classId,
         due_date: dueDate.toISOString(),
@@ -449,6 +547,33 @@ export default function AssignmentsPage() {
     }
   };
 
+  const handleTargetScopeChange = (nextScope: AssignmentTargetScope) => {
+    setFormState((previous) => ({
+      ...previous,
+      target_scope: nextScope,
+      target_group_ids: nextScope === 'GROUPS' ? previous.target_group_ids : [],
+      target_student_ids: nextScope === 'STUDENTS' ? previous.target_student_ids : [],
+    }));
+  };
+
+  const toggleTargetGroup = (groupId: number) => {
+    setFormState((previous) => ({
+      ...previous,
+      target_group_ids: previous.target_group_ids.includes(groupId)
+        ? previous.target_group_ids.filter((item) => item !== groupId)
+        : [...previous.target_group_ids, groupId],
+    }));
+  };
+
+  const toggleTargetStudent = (studentId: number) => {
+    setFormState((previous) => ({
+      ...previous,
+      target_student_ids: previous.target_student_ids.includes(studentId)
+        ? previous.target_student_ids.filter((item) => item !== studentId)
+        : [...previous.target_student_ids, studentId],
+    }));
+  };
+
   const renderStudentCardDetails = (assignment: Assignment) => {
     if (!isStudent) {
       return null;
@@ -523,6 +648,10 @@ export default function AssignmentsPage() {
         <div className="flex items-center justify-between">
           <span className="text-gray-500">Առավելագույն միավոր</span>
           <span className="font-medium text-blue-main">{TEN_SCALE_MAX_POINTS}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500">Թիրախավորում</span>
+          <span className="text-gray-700">{getTargetScopeLabel(assignment.target_scope)}</span>
         </div>
       </div>
 
@@ -727,13 +856,101 @@ export default function AssignmentsPage() {
                     type="number"
                     min={1}
                     value={formState.class_id}
-                    onChange={(event) => setFormState((state) => ({ ...state, class_id: event.target.value }))}
+                    onChange={(event) =>
+                      setFormState((state) => ({
+                        ...state,
+                        class_id: event.target.value,
+                        target_group_ids: [],
+                        target_student_ids: [],
+                      }))
+                    }
                     disabled={Boolean(editingAssignment)}
                     className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-main focus:border-transparent"
                     required
                   />
                 </div>
               </div>
+
+              <div>
+                <label htmlFor="target_scope" className="block text-sm font-medium text-gray-700">
+                  Թիրախավորում
+                </label>
+                <select
+                  id="target_scope"
+                  value={formState.target_scope}
+                  onChange={(event) => handleTargetScopeChange(event.target.value as AssignmentTargetScope)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-main focus:border-transparent"
+                >
+                  <option value="CLASS">Ամբողջ դասարան</option>
+                  <option value="GROUPS">Խմբեր</option>
+                  <option value="STUDENTS">Աշակերտներ</option>
+                </select>
+              </div>
+
+              {isLoadingTargetingOptions && (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                  Թիրախավորման տարբերակները բեռնվում են...
+                </div>
+              )}
+              {targetingOptionsError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  {targetingOptionsError}
+                </div>
+              )}
+
+              {formState.target_scope === 'GROUPS' && (
+                <div>
+                  <p className="mb-2 text-sm font-medium text-gray-700">Ընտրեք խմբերը</p>
+                  {targetingOptions.groups.length === 0 ? (
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                      Այս դասարանի համար խումբ չկա
+                    </div>
+                  ) : (
+                    <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3">
+                      {targetingOptions.groups.map((group) => (
+                        <label key={group.id} className="flex items-center justify-between gap-3 text-sm text-gray-700">
+                          <span>
+                            {group.name} ({group.members_count})
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={formState.target_group_ids.includes(group.id)}
+                            onChange={() => toggleTargetGroup(group.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-main focus:ring-blue-main"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {formState.target_scope === 'STUDENTS' && (
+                <div>
+                  <p className="mb-2 text-sm font-medium text-gray-700">Ընտրեք աշակերտներին</p>
+                  {targetingOptions.students.length === 0 ? (
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                      Այս դասարանում աշակերտներ չեն գտնվել
+                    </div>
+                  ) : (
+                    <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3">
+                      {targetingOptions.students.map((student) => (
+                        <label key={student.id} className="flex items-center justify-between gap-3 text-sm text-gray-700">
+                          <span>
+                            {student.first_name} {student.last_name} (ID {student.id})
+                          </span>
+                          <input
+                            type="checkbox"
+                            checked={formState.target_student_ids.includes(student.id)}
+                            onChange={() => toggleTargetStudent(student.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-main focus:ring-blue-main"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <label htmlFor="due_date" className="block text-sm font-medium text-gray-700">

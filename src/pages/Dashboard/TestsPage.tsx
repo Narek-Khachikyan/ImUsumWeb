@@ -20,6 +20,7 @@ import {
 } from '@/app/slices/testSlice';
 import { useAuth } from '@/hooks/useAuth';
 import { getApiErrorMessage } from '@/services/api';
+import { aiService, type AiDraftQuestion } from '@/services/aiService';
 import type {
   RecommendationDifficulty,
   RecommendationLevel,
@@ -42,6 +43,17 @@ interface QuestionFormState {
   points: string;
   options: string[];
   correct_index: string;
+}
+
+interface AiDraftFormState {
+  topic: string;
+  question_count: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  title: string;
+  description: string;
+  subject_id: string;
+  class_id: string;
+  due_date: string;
 }
 
 function formatDateTimeLocal(input: string) {
@@ -91,6 +103,19 @@ function getInitialQuestionFormState(): QuestionFormState {
     points: '1',
     options: ['', '', '', ''],
     correct_index: '0',
+  };
+}
+
+function getInitialAiDraftFormState(): AiDraftFormState {
+  return {
+    topic: '',
+    question_count: '5',
+    difficulty: 'medium',
+    title: '',
+    description: '',
+    subject_id: '',
+    class_id: '',
+    due_date: getDefaultDueDateValue(),
   };
 }
 
@@ -187,6 +212,13 @@ export default function TestsPage() {
 
   const [insightsTest, setInsightsTest] = useState<TestListItem | null>(null);
   const [isInsightsLoading, setIsInsightsLoading] = useState(false);
+  const [isAiDraftModalOpen, setIsAiDraftModalOpen] = useState(false);
+  const [aiDraftFormState, setAiDraftFormState] = useState<AiDraftFormState>(getInitialAiDraftFormState);
+  const [aiDraftQuestions, setAiDraftQuestions] = useState<AiDraftQuestion[]>([]);
+  const [aiDraftWorkflowId, setAiDraftWorkflowId] = useState<number | null>(null);
+  const [aiDraftError, setAiDraftError] = useState<string | null>(null);
+  const [isGeneratingAiDraft, setIsGeneratingAiDraft] = useState(false);
+  const [isApplyingAiDraft, setIsApplyingAiDraft] = useState(false);
 
   useEffect(() => {
     dispatch(fetchMyTests());
@@ -336,6 +368,124 @@ export default function TestsPage() {
 
   const closeInsightsModal = () => {
     setInsightsTest(null);
+  };
+
+  const openAiDraftModal = () => {
+    setAiDraftFormState(getInitialAiDraftFormState());
+    setAiDraftQuestions([]);
+    setAiDraftWorkflowId(null);
+    setAiDraftError(null);
+    setIsAiDraftModalOpen(true);
+  };
+
+  const closeAiDraftModal = () => {
+    setIsAiDraftModalOpen(false);
+    setAiDraftFormState(getInitialAiDraftFormState());
+    setAiDraftQuestions([]);
+    setAiDraftWorkflowId(null);
+    setAiDraftError(null);
+  };
+
+  const handleGenerateAiDraft = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAiDraftError(null);
+
+    const topic = aiDraftFormState.topic.trim();
+    const questionCount = Number(aiDraftFormState.question_count);
+    if (!topic) {
+      setAiDraftError('Նշեք թեման');
+      return;
+    }
+    if (!Number.isInteger(questionCount) || questionCount <= 0 || questionCount > 20) {
+      setAiDraftError('Հարցերի քանակը պետք է լինի 1-20');
+      return;
+    }
+
+    const subjectId = Number(aiDraftFormState.subject_id);
+    const classId = Number(aiDraftFormState.class_id);
+
+    setIsGeneratingAiDraft(true);
+    try {
+      const response = await aiService.generateTestDraft({
+        topic,
+        question_count: questionCount,
+        difficulty: aiDraftFormState.difficulty,
+        ...(Number.isInteger(subjectId) && subjectId > 0 ? { subject_id: subjectId } : {}),
+        ...(Number.isInteger(classId) && classId > 0 ? { class_id: classId } : {}),
+      });
+      setAiDraftWorkflowId(response.workflow_id);
+      setAiDraftQuestions(response.questions);
+    } catch (error) {
+      setAiDraftError(resolveErrorMessage(error, 'Չհաջողվեց գեներացնել AI draft-ը'));
+    } finally {
+      setIsGeneratingAiDraft(false);
+    }
+  };
+
+  const handleApplyAiDraft = async () => {
+    setAiDraftError(null);
+    if (aiDraftQuestions.length === 0) {
+      setAiDraftError('AI draft հարցեր չկան');
+      return;
+    }
+
+    const title = aiDraftFormState.title.trim();
+    const subjectId = Number(aiDraftFormState.subject_id);
+    const classId = Number(aiDraftFormState.class_id);
+    const dueDate = new Date(aiDraftFormState.due_date);
+
+    if (!title) {
+      setAiDraftError('Նշեք թեստի վերնագիրը');
+      return;
+    }
+    if (!Number.isInteger(subjectId) || subjectId <= 0) {
+      setAiDraftError('Առարկայի ID-ն պետք է լինի դրական ամբողջ թիվ');
+      return;
+    }
+    if (!Number.isInteger(classId) || classId <= 0) {
+      setAiDraftError('Դասարանի ID-ն պետք է լինի դրական ամբողջ թիվ');
+      return;
+    }
+    if (Number.isNaN(dueDate.getTime())) {
+      setAiDraftError('Վերջնաժամկետը սխալ է');
+      return;
+    }
+
+    setIsApplyingAiDraft(true);
+    try {
+      const created = await dispatch(
+        createTest({
+          title,
+          description: aiDraftFormState.description.trim(),
+          subject_id: subjectId,
+          class_id: classId,
+          due_date: dueDate.toISOString(),
+        })
+      ).unwrap();
+
+      await dispatch(
+        createTestQuestions({
+          testId: created.id,
+          questions: aiDraftQuestions.map((question, index) => ({
+            question_text: question.question_text,
+            order_index: Number.isInteger(question.order_index) ? question.order_index : index + 1,
+            points: Number.isInteger(question.points) && question.points > 0 ? question.points : 1,
+            options: question.options.map((option, optionIndex) => ({
+              option_text: option.option_text,
+              is_correct: option.is_correct,
+              order_index: Number.isInteger(option.order_index) ? option.order_index : optionIndex + 1,
+            })),
+          })),
+        })
+      ).unwrap();
+
+      await dispatch(fetchMyTests()).unwrap();
+      closeAiDraftModal();
+    } catch (error) {
+      setAiDraftError(resolveErrorMessage(error, 'Չհաջողվեց կիրառել AI draft-ը'));
+    } finally {
+      setIsApplyingAiDraft(false);
+    }
   };
 
   const handleSaveTest = async (event: FormEvent<HTMLFormElement>) => {
@@ -714,13 +864,22 @@ export default function TestsPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Թեստեր</h2>
         {canManageTests && (
-          <button
-            type="button"
-            onClick={openCreateTestModal}
-            className="px-4 py-2 bg-blue-main text-white rounded-lg hover:bg-blue-dark transition-colors"
-          >
-            + Ստեղծել թեստ
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={openAiDraftModal}
+              className="px-4 py-2 rounded-lg border border-indigo-300 text-indigo-700 hover:bg-indigo-50 transition-colors"
+            >
+              AI Draft
+            </button>
+            <button
+              type="button"
+              onClick={openCreateTestModal}
+              className="px-4 py-2 bg-blue-main text-white rounded-lg hover:bg-blue-dark transition-colors"
+            >
+              + Ստեղծել թեստ
+            </button>
+          </div>
         )}
       </div>
 
@@ -847,6 +1006,198 @@ export default function TestsPage() {
         </div>
       )}
 
+      {isAiDraftModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center">
+          <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">AI թեստի draft</h3>
+                {aiDraftWorkflowId && (
+                  <p className="text-xs text-gray-500">Workflow ID: {aiDraftWorkflowId}</p>
+                )}
+              </div>
+              <button onClick={closeAiDraftModal} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" aria-label="Close">
+                ×
+              </button>
+            </div>
+
+            <div className="grid gap-6 px-6 py-5 lg:grid-cols-2">
+              <form className="space-y-3" onSubmit={(event) => void handleGenerateAiDraft(event)}>
+                <h4 className="font-semibold text-gray-900">1) Գեներացնել draft</h4>
+                <div>
+                  <label htmlFor="ai_topic" className="block text-sm font-medium text-gray-700">Թեմա</label>
+                  <input
+                    id="ai_topic"
+                    value={aiDraftFormState.topic}
+                    onChange={(event) =>
+                      setAiDraftFormState((state) => ({ ...state, topic: event.target.value }))
+                    }
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    required
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="ai_question_count" className="block text-sm font-medium text-gray-700">Հարցերի քանակ</label>
+                    <input
+                      id="ai_question_count"
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={aiDraftFormState.question_count}
+                      onChange={(event) =>
+                        setAiDraftFormState((state) => ({ ...state, question_count: event.target.value }))
+                      }
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="ai_difficulty" className="block text-sm font-medium text-gray-700">Բարդություն</label>
+                    <select
+                      id="ai_difficulty"
+                      value={aiDraftFormState.difficulty}
+                      onChange={(event) =>
+                        setAiDraftFormState((state) => ({
+                          ...state,
+                          difficulty: event.target.value as 'easy' | 'medium' | 'hard',
+                        }))
+                      }
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    >
+                      <option value="easy">Թեթև</option>
+                      <option value="medium">Միջին</option>
+                      <option value="hard">Բարդ</option>
+                    </select>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  disabled={isGeneratingAiDraft}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {isGeneratingAiDraft ? 'Գեներացվում է...' : 'Գեներացնել draft'}
+                </button>
+
+                <hr className="my-3" />
+
+                <h4 className="font-semibold text-gray-900">2) Հաստատել և կիրառել</h4>
+                <div>
+                  <label htmlFor="ai_test_title" className="block text-sm font-medium text-gray-700">Թեստի վերնագիր</label>
+                  <input
+                    id="ai_test_title"
+                    value={aiDraftFormState.title}
+                    onChange={(event) =>
+                      setAiDraftFormState((state) => ({ ...state, title: event.target.value }))
+                    }
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    placeholder="AI draft - Թեստ"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="ai_test_description" className="block text-sm font-medium text-gray-700">Նկարագրություն</label>
+                  <textarea
+                    id="ai_test_description"
+                    value={aiDraftFormState.description}
+                    onChange={(event) =>
+                      setAiDraftFormState((state) => ({ ...state, description: event.target.value }))
+                    }
+                    rows={3}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="ai_subject_id" className="block text-sm font-medium text-gray-700">Առարկայի ID</label>
+                    <input
+                      id="ai_subject_id"
+                      type="number"
+                      min={1}
+                      value={aiDraftFormState.subject_id}
+                      onChange={(event) =>
+                        setAiDraftFormState((state) => ({ ...state, subject_id: event.target.value }))
+                      }
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="ai_class_id" className="block text-sm font-medium text-gray-700">Դասարանի ID</label>
+                    <input
+                      id="ai_class_id"
+                      type="number"
+                      min={1}
+                      value={aiDraftFormState.class_id}
+                      onChange={(event) =>
+                        setAiDraftFormState((state) => ({ ...state, class_id: event.target.value }))
+                      }
+                      className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="ai_due_date" className="block text-sm font-medium text-gray-700">Վերջնաժամկետ</label>
+                  <input
+                    id="ai_due_date"
+                    type="datetime-local"
+                    value={aiDraftFormState.due_date}
+                    onChange={(event) =>
+                      setAiDraftFormState((state) => ({ ...state, due_date: event.target.value }))
+                    }
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+                    required
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleApplyAiDraft()}
+                  disabled={isApplyingAiDraft || aiDraftQuestions.length === 0}
+                  className="rounded-lg bg-blue-main px-4 py-2 text-sm font-semibold text-white hover:bg-blue-dark disabled:opacity-50"
+                >
+                  {isApplyingAiDraft ? 'Կիրառվում է...' : 'Կիրառել draft-ը'}
+                </button>
+
+                {aiDraftError && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {aiDraftError}
+                  </div>
+                )}
+              </form>
+
+              <div className="space-y-3">
+                <h4 className="font-semibold text-gray-900">Draft հարցեր ({aiDraftQuestions.length})</h4>
+                {aiDraftQuestions.length === 0 ? (
+                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                    Նախ գեներացրեք draft հարցերը
+                  </div>
+                ) : (
+                  <div className="max-h-[62vh] space-y-3 overflow-y-auto pr-1">
+                    {aiDraftQuestions.map((question, questionIndex) => (
+                      <div key={questionIndex} className="rounded-lg border border-gray-200 p-3">
+                        <p className="font-medium text-gray-900">
+                          #{question.order_index || questionIndex + 1} {question.question_text}
+                        </p>
+                        <ul className="mt-2 space-y-1 text-sm text-gray-700">
+                          {question.options.map((option, optionIndex) => (
+                            <li
+                              key={optionIndex}
+                              className={option.is_correct ? 'font-medium text-green-700' : ''}
+                            >
+                              {option.order_index || optionIndex + 1}. {option.option_text}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTakeTest && (
         <div className="fixed inset-0 z-50 bg-black/50 p-4 flex items-center justify-center">
           <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -930,9 +1281,16 @@ export default function TestsPage() {
                 <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 space-y-4">
                   <div className="flex items-center justify-between gap-2">
                     <h4 className="font-semibold text-blue-900">Անհատական առաջարկներ</h4>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${getRecommendationLevelBadge(attempt.recommendations.level).className}`}>
-                      {getRecommendationLevelBadge(attempt.recommendations.level).label}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${getRecommendationLevelBadge(attempt.recommendations.level).className}`}
+                      >
+                        {getRecommendationLevelBadge(attempt.recommendations.level).label}
+                      </span>
+                      <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-700">
+                        Աղբյուր: {attempt.recommendations_source === 'ai' ? 'AI' : 'Rule-based'}
+                      </span>
+                    </div>
                   </div>
 
                   <p className="text-sm text-blue-900">{attempt.recommendations.summary}</p>

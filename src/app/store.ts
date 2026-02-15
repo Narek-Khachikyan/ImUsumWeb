@@ -7,6 +7,8 @@ import gradeReducer from './slices/gradeSlice';
 import offersReducer from './slices/offersSlice';
 import testReducer from './slices/testSlice';
 import chatReducer from './slices/chatSlice';
+import attendanceReducer from './slices/attendanceSlice';
+import jobsReducer from './slices/jobsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +20,8 @@ export const store = configureStore({
     offers: offersReducer,
     test: testReducer,
     chat: chatReducer,
+    attendance: attendanceReducer,
+    jobs: jobsReducer,
   },
 });
 

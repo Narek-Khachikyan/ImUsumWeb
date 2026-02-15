@@ -24,6 +24,11 @@ model User {
   updated_at            DateTime             @updatedAt @db.Timestamp(6)
   chat_channel_reads    ChatChannelRead[]
   chat_messages_sent    ChatMessage[]        @relation("ChatMessageSender")
+  attendance_overrides  AttendanceOverride[] @relation("AttendanceOverrideAuthor")
+  ai_workflow_runs      AiWorkflowRun[]      @relation("AiWorkflowRunAuthor")
+  assignment_groups_created AssignmentGroup[] @relation("AssignmentGroupCreator")
+  created_jobs          JobPosting[]         @relation("JobPostingCreator")
+  job_eligibility_overrides JobEligibilityOverride[] @relation("JobEligibilityOverrideAuthor")
   password_reset_tokens PasswordResetToken[]
   uploaded_materials    LearningMaterial[]   @relation("LearningMaterialUploader")
   student_profile       StudentProfile?
@@ -59,6 +64,7 @@ model Class {
   created_at  DateTime         @db.Timestamp(6)
   updated_at  DateTime         @updatedAt @db.Timestamp(6)
   assignments Assignment[]
+  assignment_groups AssignmentGroup[]
   chat_channels ChatChannel[]
   learning_materials LearningMaterial[]
   school      School           @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -80,7 +86,12 @@ model StudentProfile {
   created_at             DateTime               @default(now()) @db.Timestamp(6)
   updated_at             DateTime               @updatedAt @db.Timestamp(6)
   assignment_submissions AssignmentSubmission[]
+  assignment_group_memberships AssignmentGroupMember[]
+  assignment_targets     AssignmentTargetStudent[]
+  attendance_records     AttendanceRecord[]
   grades                 Grade[]
+  job_applications       JobApplication[]
+  job_eligibility_override JobEligibilityOverride?
   purchases              Purchase[]
   test_attempts          TestAttempt[]
   class_                 Class?                 @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -149,6 +160,7 @@ model Schedule {
   effective_to   DateTime?      @db.Date
   created_at     DateTime       @db.Timestamp(6)
   updated_at     DateTime       @updatedAt @db.Timestamp(6)
+  attendance_records AttendanceRecord[]
   class_         Class          @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   subject        Subject        @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   teacher        TeacherProfile @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -162,6 +174,7 @@ model Assignment {
   title           String                 @db.VarChar(255)
   description     String?
   assignment_type AssignmentType?
+  target_scope    AssignmentTargetScope      @default(CLASS)
   subject_id      Int
   class_id        Int
   teacher_id      Int
@@ -171,6 +184,8 @@ model Assignment {
   created_at      DateTime               @db.Timestamp(6)
   updated_at      DateTime               @updatedAt @db.Timestamp(6)
   submissions     AssignmentSubmission[]
+  target_groups   AssignmentTargetGroup[]
+  target_students AssignmentTargetStudent[]
   classes         Class                  @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   subject         Subject                @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   teacher         TeacherProfile         @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -459,6 +474,186 @@ model Purchase {
   @@map("purchases")
 }
 
+model AttendanceRecord {
+  id              Int               @id @default(autoincrement())
+  student_id      Int
+  schedule_id     Int
+  attendance_date DateTime          @db.Date
+  checked_in_at   DateTime?         @db.Timestamp(6)
+  status          AttendanceStatus
+  source          AttendanceSource  @default(GEOLOCATION)
+  latitude        Float?
+  longitude       Float?
+  accuracy_m      Float?
+  distance_m      Float?
+  created_at      DateTime          @default(now()) @db.Timestamp(6)
+  updated_at      DateTime          @updatedAt @db.Timestamp(6)
+  overrides       AttendanceOverride[]
+  schedule        Schedule          @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student         StudentProfile    @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([student_id, schedule_id, attendance_date], map: "uq_attendance_records_student_schedule_date")
+  @@index([attendance_date], map: "ix_attendance_records_attendance_date")
+  @@index([schedule_id], map: "ix_attendance_records_schedule_id")
+  @@index([student_id], map: "ix_attendance_records_student_id")
+  @@index([id], map: "ix_attendance_records_id")
+  @@map("attendance_records")
+}
+
+model AttendanceOverride {
+  id                   Int              @id @default(autoincrement())
+  attendance_record_id Int
+  changed_by_user_id   Int
+  previous_status      AttendanceStatus
+  new_status           AttendanceStatus
+  reason               String?
+  created_at           DateTime         @default(now()) @db.Timestamp(6)
+  attendance_record    AttendanceRecord @relation(fields: [attendance_record_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  changed_by_user      User             @relation("AttendanceOverrideAuthor", fields: [changed_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([attendance_record_id], map: "ix_attendance_overrides_attendance_record_id")
+  @@index([changed_by_user_id], map: "ix_attendance_overrides_changed_by_user_id")
+  @@index([id], map: "ix_attendance_overrides_id")
+  @@map("attendance_overrides")
+}
+
+model AiWorkflowRun {
+  id                 Int            @id @default(autoincrement())
+  workflow_type      AiWorkflowType
+  status             AiWorkflowStatus @default(DRAFT)
+  input_json         Json
+  output_json        Json
+  error_message      String?
+  created_by_user_id Int
+  applied_at         DateTime?      @db.Timestamp(6)
+  created_at         DateTime       @default(now()) @db.Timestamp(6)
+  updated_at         DateTime       @updatedAt @db.Timestamp(6)
+  created_by_user    User           @relation("AiWorkflowRunAuthor", fields: [created_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([workflow_type], map: "ix_ai_workflow_runs_workflow_type")
+  @@index([status], map: "ix_ai_workflow_runs_status")
+  @@index([created_by_user_id], map: "ix_ai_workflow_runs_created_by_user_id")
+  @@index([id], map: "ix_ai_workflow_runs_id")
+  @@map("ai_workflow_runs")
+}
+
+model JobPosting {
+  id                 Int               @id @default(autoincrement())
+  title              String            @db.VarChar(255)
+  description        String
+  company_name       String            @db.VarChar(255)
+  contact_email      String?           @db.VarChar(255)
+  external_url       String?           @db.VarChar(500)
+  is_active          Boolean           @default(true)
+  created_by_user_id Int
+  created_at         DateTime          @default(now()) @db.Timestamp(6)
+  updated_at         DateTime          @updatedAt @db.Timestamp(6)
+  applications       JobApplication[]
+  created_by_user    User              @relation("JobPostingCreator", fields: [created_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([is_active], map: "ix_job_postings_is_active")
+  @@index([created_by_user_id], map: "ix_job_postings_created_by_user_id")
+  @@index([id], map: "ix_job_postings_id")
+  @@map("job_postings")
+}
+
+model JobApplication {
+  id            Int                  @id @default(autoincrement())
+  job_posting_id Int
+  student_id    Int
+  status        JobApplicationStatus @default(PENDING)
+  cover_letter  String?
+  created_at    DateTime             @default(now()) @db.Timestamp(6)
+  updated_at    DateTime             @updatedAt @db.Timestamp(6)
+  job_posting   JobPosting           @relation(fields: [job_posting_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student       StudentProfile       @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([job_posting_id, student_id], map: "uq_job_applications_job_student")
+  @@index([job_posting_id], map: "ix_job_applications_job_posting_id")
+  @@index([student_id], map: "ix_job_applications_student_id")
+  @@index([status], map: "ix_job_applications_status")
+  @@index([id], map: "ix_job_applications_id")
+  @@map("job_applications")
+}
+
+model JobEligibilityOverride {
+  id              Int            @id @default(autoincrement())
+  student_id      Int            @unique(map: "uq_job_eligibility_overrides_student_id")
+  eligible        Boolean
+  reason          String?
+  set_by_user_id  Int
+  created_at      DateTime       @default(now()) @db.Timestamp(6)
+  updated_at      DateTime       @updatedAt @db.Timestamp(6)
+  set_by_user     User           @relation("JobEligibilityOverrideAuthor", fields: [set_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student         StudentProfile @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([set_by_user_id], map: "ix_job_eligibility_overrides_set_by_user_id")
+  @@index([id], map: "ix_job_eligibility_overrides_id")
+  @@map("job_eligibility_overrides")
+}
+
+model AssignmentGroup {
+  id                 Int                    @id @default(autoincrement())
+  name               String                 @db.VarChar(255)
+  class_id           Int
+  created_by_user_id Int
+  created_at         DateTime               @default(now()) @db.Timestamp(6)
+  updated_at         DateTime               @updatedAt @db.Timestamp(6)
+  members            AssignmentGroupMember[]
+  targets            AssignmentTargetGroup[]
+  class_             Class                  @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  created_by_user    User                   @relation("AssignmentGroupCreator", fields: [created_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([class_id, name], map: "uq_assignment_groups_class_name")
+  @@index([class_id], map: "ix_assignment_groups_class_id")
+  @@index([created_by_user_id], map: "ix_assignment_groups_created_by_user_id")
+  @@index([id], map: "ix_assignment_groups_id")
+  @@map("assignment_groups")
+}
+
+model AssignmentGroupMember {
+  id          Int             @id @default(autoincrement())
+  group_id    Int
+  student_id  Int
+  created_at  DateTime        @default(now()) @db.Timestamp(6)
+  group       AssignmentGroup @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student     StudentProfile  @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([group_id, student_id], map: "uq_assignment_group_members_group_student")
+  @@index([group_id], map: "ix_assignment_group_members_group_id")
+  @@index([student_id], map: "ix_assignment_group_members_student_id")
+  @@index([id], map: "ix_assignment_group_members_id")
+  @@map("assignment_group_members")
+}
+
+model AssignmentTargetGroup {
+  id            Int             @id @default(autoincrement())
+  assignment_id Int
+  group_id      Int
+  assignment    Assignment      @relation(fields: [assignment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  group         AssignmentGroup @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([assignment_id, group_id], map: "uq_assignment_target_groups_assignment_group")
+  @@index([assignment_id], map: "ix_assignment_target_groups_assignment_id")
+  @@index([group_id], map: "ix_assignment_target_groups_group_id")
+  @@index([id], map: "ix_assignment_target_groups_id")
+  @@map("assignment_target_groups")
+}
+
+model AssignmentTargetStudent {
+  id            Int            @id @default(autoincrement())
+  assignment_id Int
+  student_id    Int
+  assignment    Assignment     @relation(fields: [assignment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student       StudentProfile @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([assignment_id, student_id], map: "uq_assignment_target_students_assignment_student")
+  @@index([assignment_id], map: "ix_assignment_target_students_assignment_id")
+  @@index([student_id], map: "ix_assignment_target_students_student_id")
+  @@index([id], map: "ix_assignment_target_students_id")
+  @@map("assignment_target_students")
+}
+
 model PasswordResetToken {
   id                   Int       @id @default(autoincrement())
   user_id              Int
@@ -496,6 +691,54 @@ enum AssignmentType {
   GROUP
 
   @@map("assignmenttype")
+}
+
+enum AssignmentTargetScope {
+  CLASS
+  GROUPS
+  STUDENTS
+
+  @@map("assignmenttargetscope")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  LATE
+  ABSENT
+  EXCUSED
+
+  @@map("attendancestatus")
+}
+
+enum AttendanceSource {
+  GEOLOCATION
+  SYSTEM
+  MANUAL_OVERRIDE
+
+  @@map("attendancesource")
+}
+
+enum AiWorkflowType {
+  TEST_GENERATION
+  SCHEDULE_OPTIMIZATION
+
+  @@map("aiworkflowtype")
+}
+
+enum AiWorkflowStatus {
+  DRAFT
+  APPLIED
+  FAILED
+
+  @@map("aiworkflowstatus")
+}
+
+enum JobApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("jobapplicationstatus")
 }
 
 enum DayOfWeek {

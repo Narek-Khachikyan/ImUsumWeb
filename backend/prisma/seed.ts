@@ -28,6 +28,16 @@ const REQUIRED_TABLES = [
   'chat_channel_reads',
   'blog_posts',
   'learning_materials',
+  'attendance_records',
+  'attendance_overrides',
+  'ai_workflow_runs',
+  'job_postings',
+  'job_applications',
+  'job_eligibility_overrides',
+  'assignment_groups',
+  'assignment_group_members',
+  'assignment_target_groups',
+  'assignment_target_students',
   'offers',
   'purchases',
   'password_reset_tokens',
@@ -98,13 +108,23 @@ async function resetDatabase(): Promise<void> {
   await safeDelete('test_options', () => prisma.testOption.deleteMany());
   await safeDelete('test_questions', () => prisma.testQuestion.deleteMany());
   await safeDelete('tests', () => prisma.test.deleteMany());
+  await safeDelete('attendance_overrides', () => prisma.attendanceOverride.deleteMany());
+  await safeDelete('attendance_records', () => prisma.attendanceRecord.deleteMany());
   await safeDelete('chat_channel_reads', () => prisma.chatChannelRead.deleteMany());
   await safeDelete('chat_messages', () => prisma.chatMessage.deleteMany());
   await safeDelete('chat_channels', () => prisma.chatChannel.deleteMany());
+  await safeDelete('assignment_target_students', () => prisma.assignmentTargetStudent.deleteMany());
+  await safeDelete('assignment_target_groups', () => prisma.assignmentTargetGroup.deleteMany());
+  await safeDelete('assignment_group_members', () => prisma.assignmentGroupMember.deleteMany());
+  await safeDelete('assignment_groups', () => prisma.assignmentGroup.deleteMany());
   await safeDelete('assignment_submissions', () => prisma.assignmentSubmission.deleteMany());
   await safeDelete('grades', () => prisma.grade.deleteMany());
   await safeDelete('assignments', () => prisma.assignment.deleteMany());
   await safeDelete('schedules', () => prisma.schedule.deleteMany());
+  await safeDelete('job_applications', () => prisma.jobApplication.deleteMany());
+  await safeDelete('job_eligibility_overrides', () => prisma.jobEligibilityOverride.deleteMany());
+  await safeDelete('job_postings', () => prisma.jobPosting.deleteMany());
+  await safeDelete('ai_workflow_runs', () => prisma.aiWorkflowRun.deleteMany());
   await safeDelete('teacher_subjects', () => prisma.teacherSubject.deleteMany());
   await safeDelete('purchases', () => prisma.purchase.deleteMany());
   await safeDelete('offers', () => prisma.offer.deleteMany());

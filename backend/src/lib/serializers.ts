@@ -82,18 +82,24 @@ export function serializeSchedule(schedule: Schedule) {
   };
 }
 
-export function serializeAssignment(assignment: Assignment) {
+export function serializeAssignment(
+  assignment: Assignment,
+  targets?: { target_group_ids?: number[]; target_student_ids?: number[] }
+) {
   return {
     id: assignment.id,
     title: assignment.title,
     description: assignment.description,
     assignment_type: assignment.assignment_type,
+    target_scope: assignment.target_scope,
     subject_id: assignment.subject_id,
     class_id: assignment.class_id,
     teacher_id: assignment.teacher_id,
     due_date: assignment.due_date.toISOString(),
     max_points: assignment.max_points,
     is_published: assignment.is_published,
+    target_group_ids: targets?.target_group_ids ?? [],
+    target_student_ids: targets?.target_student_ids ?? [],
     created_at: assignment.created_at.toISOString(),
     updated_at: assignment.updated_at.toISOString(),
   };
@@ -245,6 +251,7 @@ export function serializeOfferListItem(offer: Offer) {
     category: offer.category,
     stock_quantity: offer.stock_quantity,
     is_available: offer.is_active && (offer.stock_quantity === null || offer.stock_quantity > 0),
+    created_at: offer.created_at.toISOString(),
   };
 }
 

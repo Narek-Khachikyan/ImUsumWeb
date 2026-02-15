@@ -59,5 +59,10 @@ export const env = {
     : ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'mp4'],
   UPLOAD_DIR: process.env.UPLOAD_DIR ?? './uploads',
   GEOLOCATION_RADIUS_METERS: parseNumber(process.env.GEOLOCATION_RADIUS_METERS, 100),
+  GEOLOCATION_CHECKIN_BEFORE_MINUTES: parseNumber(process.env.GEOLOCATION_CHECKIN_BEFORE_MINUTES, 15),
+  GEOLOCATION_CHECKIN_AFTER_MINUTES: parseNumber(process.env.GEOLOCATION_CHECKIN_AFTER_MINUTES, 20),
+  BEST_STUDENT_GRADE_THRESHOLD: parseNumber(process.env.BEST_STUDENT_GRADE_THRESHOLD, 8),
+  BEST_STUDENT_LOOKBACK_DAYS: parseNumber(process.env.BEST_STUDENT_LOOKBACK_DAYS, 90),
+  BEST_STUDENT_MIN_GRADES: parseNumber(process.env.BEST_STUDENT_MIN_GRADES, 3),
   NODE_ENV: process.env.NODE_ENV ?? 'development',
 };

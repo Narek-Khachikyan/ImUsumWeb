@@ -25,6 +25,7 @@ const UsersPage = lazy(() => import('./pages/Dashboard/UsersPage'));
 const OffersPage = lazy(() => import('./pages/Dashboard/Offers/OffersPage'));
 const MyPurchasesPage = lazy(() => import('./pages/Dashboard/Offers/MyPurchasesPage'));
 const ChatPage = lazy(() => import('./pages/Dashboard/ChatPage'));
+const JobsPage = lazy(() => import('./pages/Dashboard/JobsPage'));
 
 // Loading component
 const PageLoader = () => (
@@ -188,6 +189,14 @@ function App() {
           element={
             <Suspense fallback={<PageLoader />}>
               <ChatPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="jobs"
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <JobsPage />
             </Suspense>
           }
         />

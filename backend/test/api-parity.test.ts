@@ -48,6 +48,22 @@ const { mockPrisma, requestPasswordReset, resetPasswordWithToken } = vi.hoisted(
       findUnique: vi.fn(),
       findMany: vi.fn(),
     },
+    assignmentTargetGroup: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+      deleteMany: vi.fn(),
+      createMany: vi.fn(),
+    },
+    assignmentTargetStudent: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+      deleteMany: vi.fn(),
+      createMany: vi.fn(),
+    },
+    assignmentGroup: {
+      count: vi.fn(),
+      findMany: vi.fn(),
+    },
     assignmentSubmission: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
@@ -92,6 +108,9 @@ const { mockPrisma, requestPasswordReset, resetPasswordWithToken } = vi.hoisted(
     },
     offer: {
       findFirst: vi.fn(),
+    },
+    subject: {
+      findUnique: vi.fn(),
     },
     purchase: {
       findUnique: vi.fn(),
@@ -143,6 +162,7 @@ function buildAssignment(overrides: Record<string, unknown> = {}) {
     title: 'Assignment',
     description: null,
     assignment_type: 'individual',
+    target_scope: 'CLASS',
     subject_id: 2,
     class_id: 1,
     teacher_id: 1,
@@ -297,6 +317,12 @@ describe('API parity', () => {
       buildSubmission({ points_earned: 10, feedback: 'Checked', is_graded: true })
     );
     mockPrisma.assignment.findUnique.mockResolvedValue(buildAssignment());
+    mockPrisma.assignmentTargetGroup.findMany.mockResolvedValue([]);
+    mockPrisma.assignmentTargetGroup.count.mockResolvedValue(0);
+    mockPrisma.assignmentTargetStudent.findMany.mockResolvedValue([]);
+    mockPrisma.assignmentTargetStudent.count.mockResolvedValue(0);
+    mockPrisma.assignmentGroup.findMany.mockResolvedValue([]);
+    mockPrisma.assignmentGroup.count.mockResolvedValue(0);
     mockPrisma.grade.findUnique.mockResolvedValue(buildGrade());
     mockPrisma.grade.findFirst.mockResolvedValue(null);
     mockPrisma.grade.findMany.mockResolvedValue([]);
@@ -312,6 +338,7 @@ describe('API parity', () => {
     mockPrisma.testQuestion.findFirst.mockResolvedValue(buildTestQuestion());
     mockPrisma.testQuestion.findMany.mockResolvedValue([]);
     mockPrisma.testAnswer.findMany.mockResolvedValue([]);
+    mockPrisma.subject.findUnique.mockResolvedValue({ id: 2, name: 'Mathematics' });
 
     mockPrisma.$queryRaw.mockResolvedValue(undefined);
   });

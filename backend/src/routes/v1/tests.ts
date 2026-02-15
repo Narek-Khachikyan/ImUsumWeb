@@ -13,6 +13,7 @@ import {
   serializeTestOption,
   serializeTestQuestion,
 } from '../../lib/serializers.js';
+import { buildAiRecommendation } from '../../services/openaiService.js';
 import { buildTestAttemptRecommendation } from '../../services/testRecommendationsService.js';
 
 function parsePositiveInt(value: string, detail: string): number {
@@ -1047,24 +1048,54 @@ const testsRoutes: FastifyPluginAsync = async (fastify) => {
       };
     });
 
-    const recommendations = await buildTestAttemptRecommendation({
-      percentage: attempt.percentage,
-      subject_id: test.subject_id,
-      student_id: student.id,
-      answers: attempt.answers.map((answer) => ({
+    const answerPayload = attempt.answers.map((answer) => ({
+      question_id: answer.question_id,
+      question_text: answer.question.question_text,
+      selected_option_text: answer.selected_option.option_text,
+      correct_option_text: answer.question.options[0]?.option_text ?? '—',
+      is_correct: answer.is_correct,
+      points_lost: Math.max(answer.question.points - answer.awarded_points, 0),
+    }));
+
+    const focusQuestions = answerPayload
+      .filter((answer) => !answer.is_correct)
+      .sort((left, right) => right.points_lost - left.points_lost)
+      .slice(0, 3)
+      .map((answer) => ({
         question_id: answer.question_id,
-        question_text: answer.question.question_text,
-        selected_option_text: answer.selected_option.option_text,
-        correct_option_text: answer.question.options[0]?.option_text ?? '—',
-        is_correct: answer.is_correct,
-        points_lost: Math.max(answer.question.points - answer.awarded_points, 0),
-      })),
+        question_text: answer.question_text,
+        selected_option_text: answer.selected_option_text,
+        correct_option_text: answer.correct_option_text,
+        points_lost: answer.points_lost,
+      }));
+
+    const subject = await prisma.subject.findUnique({
+      where: { id: test.subject_id },
+      select: { name: true },
     });
+
+    const aiRecommendations = await buildAiRecommendation({
+      percentage: attempt.percentage,
+      subject_name: subject?.name ?? `Subject #${test.subject_id}`,
+      focus_questions: focusQuestions,
+      average_grade: null,
+      trend: 'insufficient_data',
+    });
+
+    const recommendations =
+      aiRecommendations ??
+      (await buildTestAttemptRecommendation({
+        percentage: attempt.percentage,
+        subject_id: test.subject_id,
+        student_id: student.id,
+        answers: answerPayload,
+      }));
 
     return {
       attempt: serializeTestAttempt(attempt),
       answers: serializedAnswers,
       recommendations,
+      recommendations_source: aiRecommendations ? 'ai' : 'rule_based',
     };
   });
 

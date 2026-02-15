@@ -13,6 +13,7 @@ export const offersCopy = {
    categories: {
       all: 'Բոլորը',
       food: 'Սնունդ',
+      fashion: 'Նորաձեւություն',
       clothing: 'Հագուստ',
       entertainment: 'Ժամանց',
       education: 'Կրթություն',

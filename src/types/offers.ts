@@ -4,6 +4,7 @@
 
 export type OfferCategory =
    | 'food'
+   | 'fashion'
    | 'clothing'
    | 'entertainment'
    | 'education'
@@ -21,6 +22,7 @@ export interface Offer {
    category: OfferCategory;
    stock_quantity: number | null;
    is_available: boolean;
+   created_at?: string;
 }
 
 export interface OfferDetail extends Offer {
@@ -66,6 +68,7 @@ export interface StudentBalance {
 export const CATEGORY_LABELS: Record<OfferCategory | 'all', string> = {
    all: 'Բdelays',
    food: 'Սdelays',
+   fashion: 'Նորաձեւություն',
    clothing: 'Հdelays',
    entertainment: ' Delays',
    education: 'Կdelays',

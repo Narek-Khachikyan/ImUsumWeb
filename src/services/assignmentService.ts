@@ -1,10 +1,15 @@
 import api from './api';
 
+export type AssignmentTargetScope = 'CLASS' | 'GROUPS' | 'STUDENTS';
+
 export interface Assignment {
   id: number;
   title: string;
   description: string | null;
   assignment_type: 'individual' | 'group' | 'INDIVIDUAL' | 'GROUP' | null;
+  target_scope: AssignmentTargetScope;
+  target_group_ids: number[];
+  target_student_ids: number[];
   subject_id: number;
   class_id: number;
   teacher_id: number;
@@ -19,6 +24,9 @@ export interface AssignmentCreate {
   title: string;
   description?: string;
   assignment_type?: 'individual' | 'group' | 'INDIVIDUAL' | 'GROUP';
+  target_scope?: AssignmentTargetScope;
+  target_group_ids?: number[];
+  target_student_ids?: number[];
   subject_id: number;
   class_id: number;
   due_date: string;
@@ -49,6 +57,19 @@ export interface SubmissionCreate {
 export interface SubmissionGrade {
   points_earned: number;
   feedback?: string;
+}
+
+export interface AssignmentTargetingOptions {
+  groups: Array<{
+    id: number;
+    name: string;
+    members_count: number;
+  }>;
+  students: Array<{
+    id: number;
+    first_name: string;
+    last_name: string;
+  }>;
 }
 
 export const assignmentService = {
@@ -98,6 +119,13 @@ export const assignmentService = {
 
   async gradeSubmission(assignmentId: number, submissionId: number, data: SubmissionGrade): Promise<Submission> {
     const response = await api.put<Submission>(`/assignments/${assignmentId}/submissions/${submissionId}`, data);
+    return response.data;
+  },
+
+  async getTargetingOptions(classId: number): Promise<AssignmentTargetingOptions> {
+    const response = await api.get<AssignmentTargetingOptions>('/assignments/targeting-options', {
+      params: { class_id: classId },
+    });
     return response.data;
   },
 };

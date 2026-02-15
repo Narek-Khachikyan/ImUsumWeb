@@ -7,3 +7,7 @@ export * from './gradeService';
 export * from './userService';
 export * from './testService';
 export * from './chatService';
+export * from './offersService';
+export * from './attendanceService';
+export * from './jobsService';
+export * from './aiService';

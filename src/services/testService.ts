@@ -159,6 +159,7 @@ export interface TestAttemptResponse {
   attempt: TestAttempt;
   answers: TestAnswer[];
   recommendations?: TestAttemptRecommendation;
+  recommendations_source?: 'ai' | 'rule_based';
 }
 
 export interface TestAnalytics {
