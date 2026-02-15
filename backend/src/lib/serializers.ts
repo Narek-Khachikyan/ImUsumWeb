@@ -5,6 +5,7 @@ import type {
   ChatChannel,
   ChatMessage,
   Grade,
+  LearningMaterial,
   Offer,
   Purchase,
   Schedule,
@@ -43,6 +44,24 @@ export function serializeBlogPost(blog: BlogPost) {
     letter: blog.letter,
     date: toDateOnlyString(blog.date),
     hot: blog.hot,
+  };
+}
+
+export function serializeLearningMaterial(material: LearningMaterial) {
+  return {
+    id: material.id,
+    title: material.title,
+    description: material.description,
+    material_type: material.material_type,
+    author: material.author,
+    file_url: material.file_url,
+    thumbnail_url: material.thumbnail_url,
+    subject_id: material.subject_id,
+    class_id: material.class_id,
+    is_published: material.is_published,
+    uploaded_by_user_id: material.uploaded_by_user_id,
+    created_at: material.created_at.toISOString(),
+    updated_at: material.updated_at.toISOString(),
   };
 }
 

@@ -5,6 +5,7 @@ import authRoutes from './auth.js';
 import blogsRoutes from './blogs.js';
 import chatRoutes from './chat.js';
 import gradesRoutes from './grades.js';
+import materialsRoutes from './materials.js';
 import offersRoutes from './offers.js';
 import purchasesRoutes from './purchases.js';
 import schedulesRoutes from './schedules.js';
@@ -20,6 +21,7 @@ const v1Routes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(assignmentsRoutes, { prefix: '/assignments' });
   await fastify.register(testsRoutes, { prefix: '/tests' });
   await fastify.register(gradesRoutes, { prefix: '/grades' });
+  await fastify.register(materialsRoutes, { prefix: '/materials' });
   await fastify.register(offersRoutes, { prefix: '/offers' });
   await fastify.register(purchasesRoutes, { prefix: '/purchases' });
 };

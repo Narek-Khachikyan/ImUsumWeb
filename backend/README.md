@@ -61,6 +61,19 @@ This starts:
 - Metrics: `GET /metrics`
 - API prefix: `/api/v1`
 
+## Materials Module (`/api/v1/materials`)
+- `GET /materials` (authenticated): list materials with filters:
+  - `skip`, `limit`, `q`, `material_type`, `subject_id`, `class_id`, `is_published`
+- `GET /materials/:material_id` (authenticated): get single material with role-aware visibility checks.
+- `POST /materials` (director/admin): create a material.
+- `PUT /materials/:material_id` (director/admin): partial update.
+- `DELETE /materials/:material_id` (director/admin): hard delete.
+
+Access policy:
+- `student`: can only read published materials from own class or global (`class_id = null`).
+- `teacher`: can only read published materials.
+- `director/admin`: full read/write access, including unpublished materials.
+
 ## Quality Commands
 From `backend/`:
 - `npm run lint`

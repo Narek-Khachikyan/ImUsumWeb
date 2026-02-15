@@ -27,6 +27,7 @@ const REQUIRED_TABLES = [
   'chat_messages',
   'chat_channel_reads',
   'blog_posts',
+  'learning_materials',
   'offers',
   'purchases',
   'password_reset_tokens',
@@ -75,6 +76,10 @@ type OffersSeed = {
   purchaseIds: number[];
 };
 
+type MaterialsSeed = {
+  materialIds: number[];
+};
+
 async function resetDatabase(): Promise<void> {
   const safeDelete = async (label: string, action: () => Promise<unknown>) => {
     try {
@@ -103,6 +108,7 @@ async function resetDatabase(): Promise<void> {
   await safeDelete('teacher_subjects', () => prisma.teacherSubject.deleteMany());
   await safeDelete('purchases', () => prisma.purchase.deleteMany());
   await safeDelete('offers', () => prisma.offer.deleteMany());
+  await safeDelete('learning_materials', () => prisma.learningMaterial.deleteMany());
   await safeDelete('partners', () => prisma.partner.deleteMany());
   await safeDelete('blog_posts', () => prisma.blogPost.deleteMany());
   await safeDelete('password_reset_tokens', () => prisma.passwordResetToken.deleteMany());
@@ -511,6 +517,79 @@ async function seedBlogs(): Promise<void> {
       },
     ],
   });
+}
+
+async function seedLearningMaterials(core: CoreSeed, users: UsersSeed): Promise<MaterialsSeed> {
+  const materials = await Promise.all([
+    prisma.learningMaterial.create({
+      data: {
+        title: 'Algebra Fundamentals Workbook',
+        description: 'Practice set with solved examples for linear and quadratic equations.',
+        material_type: 'BOOK',
+        author: 'N. Harutyunyan',
+        file_url: 'https://example.com/materials/algebra-fundamentals-workbook.pdf',
+        thumbnail_url: 'https://example.com/materials/thumbs/algebra-fundamentals-workbook.jpg',
+        subject_id: core.subjectIds.math,
+        class_id: core.classIds[0],
+        is_published: true,
+        uploaded_by_user_id: users.directorUserId,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+    }),
+    prisma.learningMaterial.create({
+      data: {
+        title: 'Physics Motion Cheat Sheet',
+        description: 'One-page reference for basic mechanics formulas.',
+        material_type: 'WORKSHEET',
+        author: 'A. Sargsyan',
+        file_url: 'https://example.com/materials/physics-motion-cheatsheet.pdf',
+        thumbnail_url: null,
+        subject_id: core.subjectIds.physics,
+        class_id: null,
+        is_published: true,
+        uploaded_by_user_id: users.adminUserId,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+    }),
+    prisma.learningMaterial.create({
+      data: {
+        title: 'English Essay Structure Guide',
+        description: 'Step-by-step outline for writing strong essay drafts.',
+        material_type: 'ARTICLE',
+        author: 'M. Petrosyan',
+        file_url: 'https://example.com/materials/english-essay-structure-guide.pdf',
+        thumbnail_url: 'https://example.com/materials/thumbs/english-essay-guide.jpg',
+        subject_id: core.subjectIds.english,
+        class_id: core.classIds[1],
+        is_published: true,
+        uploaded_by_user_id: users.directorUserId,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+    }),
+    prisma.learningMaterial.create({
+      data: {
+        title: 'History Video Lecture Pack',
+        description: 'Supplemental video links and notes for modern history topics.',
+        material_type: 'VIDEO',
+        author: 'ImUsum Editorial Team',
+        file_url: 'https://example.com/materials/history-video-lecture-pack',
+        thumbnail_url: 'https://example.com/materials/thumbs/history-video-pack.jpg',
+        subject_id: core.subjectIds.history,
+        class_id: null,
+        is_published: false,
+        uploaded_by_user_id: users.adminUserId,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+    }),
+  ]);
+
+  return {
+    materialIds: materials.map((item) => item.id),
+  };
 }
 
 async function seedAssignmentsAndSubmissionsAndGrades(core: CoreSeed, users: UsersSeed): Promise<AssignmentSeed> {
@@ -972,17 +1051,25 @@ async function seedOffersAndPurchases(users: UsersSeed): Promise<OffersSeed> {
   };
 }
 
-async function printSummary(users: UsersSeed, assignments: AssignmentSeed, tests: TestSeed, offers: OffersSeed): Promise<void> {
-  const [userCount, scheduleCount, assignmentCount, submissionCount, testCount, attemptCount, offerCount, purchaseCount] = await Promise.all([
-    prisma.user.count(),
-    prisma.schedule.count(),
-    prisma.assignment.count(),
-    prisma.assignmentSubmission.count(),
-    prisma.test.count(),
-    prisma.testAttempt.count(),
-    prisma.offer.count(),
-    prisma.purchase.count(),
-  ]);
+async function printSummary(
+  users: UsersSeed,
+  assignments: AssignmentSeed,
+  tests: TestSeed,
+  offers: OffersSeed,
+  materials: MaterialsSeed
+): Promise<void> {
+  const [userCount, scheduleCount, assignmentCount, submissionCount, testCount, attemptCount, materialCount, offerCount, purchaseCount] =
+    await Promise.all([
+      prisma.user.count(),
+      prisma.schedule.count(),
+      prisma.assignment.count(),
+      prisma.assignmentSubmission.count(),
+      prisma.test.count(),
+      prisma.testAttempt.count(),
+      prisma.learningMaterial.count(),
+      prisma.offer.count(),
+      prisma.purchase.count(),
+    ]);
 
   const studentEmails = Array.from({ length: users.studentUserIds.length }, (_, index) => {
     const n = index + 1;
@@ -998,6 +1085,7 @@ async function printSummary(users: UsersSeed, assignments: AssignmentSeed, tests
   console.log(`Submissions: ${submissionCount}`);
   console.log(`Tests: ${testCount}`);
   console.log(`Attempts: ${attemptCount}`);
+  console.log(`Materials: ${materialCount}`);
   console.log(`Offers: ${offerCount}`);
   console.log(`Purchases: ${purchaseCount}`);
   console.log('');
@@ -1013,6 +1101,7 @@ async function printSummary(users: UsersSeed, assignments: AssignmentSeed, tests
   console.log('');
   console.log(`Seeded assignment IDs: ${assignments.assignmentIds.join(', ')}`);
   console.log(`Seeded test IDs: ${tests.testIds.join(', ')}`);
+  console.log(`Seeded material IDs: ${materials.materialIds.join(', ')}`);
   console.log(`Seeded offer IDs: ${offers.offerIds.join(', ')}`);
   console.log(`Seeded purchase IDs: ${offers.purchaseIds.join(', ')}`);
 }
@@ -1035,6 +1124,9 @@ async function main(): Promise<void> {
   console.log('Seeding blogs...');
   await seedBlogs();
 
+  console.log('Seeding learning materials...');
+  const materials = await seedLearningMaterials(core, users);
+
   console.log('Seeding assignments, submissions and grades...');
   const assignments = await seedAssignmentsAndSubmissionsAndGrades(core, users);
 
@@ -1044,7 +1136,7 @@ async function main(): Promise<void> {
   console.log('Seeding offers and purchases...');
   const offers = await seedOffersAndPurchases(users);
 
-  await printSummary(users, assignments, tests, offers);
+  await printSummary(users, assignments, tests, offers, materials);
 }
 
 main()

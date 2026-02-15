@@ -13,3 +13,4 @@ Execution plans are decision-complete implementation artifacts used by agents.
 
 ## Recent Completed Plans
 - `completed/2026-02-15-agent-first-hardening.md`
+- `completed/2026-02-15-materials-module-mvp.md`

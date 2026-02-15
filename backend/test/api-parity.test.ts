@@ -37,6 +37,13 @@ const { mockPrisma, requestPasswordReset, resetPasswordWithToken } = vi.hoisted(
       update: vi.fn(),
       delete: vi.fn(),
     },
+    learningMaterial: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
     assignment: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
@@ -199,6 +206,25 @@ function buildTest(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function buildLearningMaterial(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    title: 'Algebra Workbook',
+    description: 'Exercises for class',
+    material_type: 'BOOK',
+    author: 'Author Name',
+    file_url: 'https://example.com/materials/algebra.pdf',
+    thumbnail_url: null,
+    subject_id: 2,
+    class_id: 1,
+    is_published: true,
+    uploaded_by_user_id: 99,
+    created_at: now,
+    updated_at: now,
+    ...overrides,
+  };
+}
+
 function buildTestQuestion(overrides: Record<string, unknown> = {}) {
   return {
     id: 101,
@@ -260,6 +286,10 @@ describe('API parity', () => {
     mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 1, user_id: 1 });
 
     mockPrisma.blogPost.findMany.mockResolvedValue([]);
+    mockPrisma.learningMaterial.findMany.mockResolvedValue([]);
+    mockPrisma.learningMaterial.findUnique.mockResolvedValue(null);
+    mockPrisma.learningMaterial.create.mockResolvedValue(buildLearningMaterial());
+    mockPrisma.learningMaterial.update.mockResolvedValue(buildLearningMaterial());
     mockPrisma.assignmentSubmission.findFirst.mockResolvedValue(null);
     mockPrisma.assignmentSubmission.findMany.mockResolvedValue([]);
     mockPrisma.assignmentSubmission.create.mockResolvedValue(buildSubmission());
@@ -1655,6 +1685,252 @@ describe('API parity', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json().detail).toBe('Cannot modify test after first attempt');
+    await app.close();
+  });
+
+  it('student materials list includes only published and class/global scope -> 200', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
+    mockPrisma.learningMaterial.findMany.mockResolvedValue([
+      buildLearningMaterial({ id: 10, class_id: 3, is_published: true }),
+      buildLearningMaterial({ id: 11, class_id: null, is_published: true, material_type: 'WORKSHEET' }),
+    ]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/materials',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toHaveLength(2);
+    expect(response.json()[0]).toMatchObject({ id: 10, class_id: 3, is_published: true });
+    expect(response.json()[1]).toMatchObject({ id: 11, class_id: null, is_published: true });
+    expect(mockPrisma.learningMaterial.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([
+            { is_published: true },
+            { OR: [{ class_id: 3 }, { class_id: null }] },
+          ]),
+        }),
+      })
+    );
+    await app.close();
+  });
+
+  it('teacher materials list always excludes unpublished -> 200', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.learningMaterial.findMany.mockResolvedValue([buildLearningMaterial({ id: 12, is_published: true })]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/materials?is_published=false',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockPrisma.learningMaterial.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { AND: [{ is_published: true }] },
+      })
+    );
+    await app.close();
+  });
+
+  it('director materials list supports is_published=false filter -> 200', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'director' }));
+    mockPrisma.learningMaterial.findMany.mockResolvedValue([buildLearningMaterial({ id: 13, is_published: false })]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/materials?is_published=false',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockPrisma.learningMaterial.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { AND: [{ is_published: false }] },
+      })
+    );
+    await app.close();
+  });
+
+  it('student cannot access material from another class -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 1 });
+    mockPrisma.learningMaterial.findUnique.mockResolvedValue(
+      buildLearningMaterial({ id: 15, class_id: 2, is_published: true })
+    );
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/materials/15',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().detail).toBe('Material is not available for this class');
+    await app.close();
+  });
+
+  it('teacher cannot create material -> 403', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/materials',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        title: 'Teacher draft',
+        file_url: 'https://example.com/materials/teacher-draft.pdf',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    await app.close();
+  });
+
+  it('director creates material and uploader is current user -> 201', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '44', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 44, role: 'director' }));
+    mockPrisma.learningMaterial.create.mockResolvedValue(
+      buildLearningMaterial({ id: 22, uploaded_by_user_id: 44, title: 'Director material' })
+    );
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/materials',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        title: 'Director material',
+        file_url: 'https://example.com/materials/director-material.pdf',
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json()).toMatchObject({ id: 22, uploaded_by_user_id: 44 });
+    expect(mockPrisma.learningMaterial.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          title: 'Director material',
+          file_url: 'https://example.com/materials/director-material.pdf',
+          uploaded_by_user_id: 44,
+        }),
+      })
+    );
+    await app.close();
+  });
+
+  it('director updates material partially without changing uploader -> 200', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 1, role: 'director' }));
+    mockPrisma.learningMaterial.findUnique.mockResolvedValue(
+      buildLearningMaterial({ id: 22, uploaded_by_user_id: 77, title: 'Old title' })
+    );
+    mockPrisma.learningMaterial.update.mockResolvedValue(
+      buildLearningMaterial({ id: 22, uploaded_by_user_id: 77, title: 'New title' })
+    );
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/materials/22',
+      headers: { authorization: `Bearer ${token}` },
+      payload: { title: 'New title' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ id: 22, title: 'New title', uploaded_by_user_id: 77 });
+    const updateCall = mockPrisma.learningMaterial.update.mock.calls.at(-1);
+    expect(updateCall).toBeDefined();
+    const updateArg = updateCall?.[0] as { data: Record<string, unknown> };
+    expect(updateArg.data).not.toHaveProperty('uploaded_by_user_id');
+    await app.close();
+  });
+
+  it('director delete material returns 204 and then detail returns 404', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 1, role: 'director' }));
+    mockPrisma.learningMaterial.findUnique
+      .mockResolvedValueOnce(buildLearningMaterial({ id: 31 }))
+      .mockResolvedValueOnce(null);
+
+    const deleteResponse = await app.inject({
+      method: 'DELETE',
+      url: '/api/v1/materials/31',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    const getResponse = await app.inject({
+      method: 'GET',
+      url: '/api/v1/materials/31',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(deleteResponse.statusCode).toBe(204);
+    expect(getResponse.statusCode).toBe(404);
+    expect(getResponse.json().detail).toBe('Material not found');
+    await app.close();
+  });
+
+  it('materials invalid limit/material_type/id return 400', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'director' }));
+
+    const invalidLimitResponse = await app.inject({
+      method: 'GET',
+      url: '/api/v1/materials?limit=0',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(invalidLimitResponse.statusCode).toBe(400);
+
+    const invalidTypeResponse = await app.inject({
+      method: 'GET',
+      url: '/api/v1/materials?material_type=unknown',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(invalidTypeResponse.statusCode).toBe(400);
+
+    const invalidIdResponse = await app.inject({
+      method: 'GET',
+      url: '/api/v1/materials/not-a-number',
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(invalidIdResponse.statusCode).toBe(400);
+
     await app.close();
   });
 

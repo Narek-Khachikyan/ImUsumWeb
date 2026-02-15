@@ -25,6 +25,7 @@ model User {
   chat_channel_reads    ChatChannelRead[]
   chat_messages_sent    ChatMessage[]        @relation("ChatMessageSender")
   password_reset_tokens PasswordResetToken[]
+  uploaded_materials    LearningMaterial[]   @relation("LearningMaterialUploader")
   student_profile       StudentProfile?
   teacher_profile       TeacherProfile?
   school                School?              @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -59,6 +60,7 @@ model Class {
   updated_at  DateTime         @updatedAt @db.Timestamp(6)
   assignments Assignment[]
   chat_channels ChatChannel[]
+  learning_materials LearningMaterial[]
   school      School           @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   schedules   Schedule[]
   students    StudentProfile[]
@@ -115,6 +117,7 @@ model Subject {
   updated_at  DateTime         @updatedAt @db.Timestamp(6)
   assignments Assignment[]
   grades      Grade[]
+  learning_materials LearningMaterial[]
   schedules   Schedule[]
   tests       Test[]
   teachers    TeacherSubject[]
@@ -380,6 +383,32 @@ model BlogPost {
   @@map("blog_posts")
 }
 
+model LearningMaterial {
+  id                  Int                 @id @default(autoincrement())
+  title               String              @db.VarChar(255)
+  description         String?
+  material_type       LearningMaterialType @default(BOOK)
+  author              String?             @db.VarChar(255)
+  file_url            String              @db.VarChar(500)
+  thumbnail_url       String?             @db.VarChar(500)
+  subject_id          Int?
+  class_id            Int?
+  is_published        Boolean             @default(true)
+  uploaded_by_user_id Int
+  created_at          DateTime            @default(now()) @db.Timestamp(6)
+  updated_at          DateTime            @updatedAt @db.Timestamp(6)
+  class_              Class?              @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subject             Subject?            @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  uploaded_by_user    User                @relation("LearningMaterialUploader", fields: [uploaded_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id], map: "ix_learning_materials_id")
+  @@index([subject_id], map: "ix_learning_materials_subject_id")
+  @@index([class_id], map: "ix_learning_materials_class_id")
+  @@index([uploaded_by_user_id], map: "ix_learning_materials_uploaded_by_user_id")
+  @@index([material_type], map: "ix_learning_materials_material_type")
+  @@map("learning_materials")
+}
+
 model Partner {
   id          Int      @id @default(autoincrement())
   name        String   @db.VarChar(255)
@@ -486,4 +515,14 @@ enum ChatChannelType {
   staff
 
   @@map("chatchanneltype")
+}
+
+enum LearningMaterialType {
+  BOOK
+  ARTICLE
+  WORKSHEET
+  VIDEO
+  OTHER
+
+  @@map("learningmaterialtype")
 }
