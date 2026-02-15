@@ -23,6 +23,9 @@ const REQUIRED_TABLES = [
   'test_options',
   'test_attempts',
   'test_answers',
+  'chat_channels',
+  'chat_messages',
+  'chat_channel_reads',
   'blog_posts',
   'offers',
   'purchases',
@@ -90,6 +93,9 @@ async function resetDatabase(): Promise<void> {
   await safeDelete('test_options', () => prisma.testOption.deleteMany());
   await safeDelete('test_questions', () => prisma.testQuestion.deleteMany());
   await safeDelete('tests', () => prisma.test.deleteMany());
+  await safeDelete('chat_channel_reads', () => prisma.chatChannelRead.deleteMany());
+  await safeDelete('chat_messages', () => prisma.chatMessage.deleteMany());
+  await safeDelete('chat_channels', () => prisma.chatChannel.deleteMany());
   await safeDelete('assignment_submissions', () => prisma.assignmentSubmission.deleteMany());
   await safeDelete('grades', () => prisma.grade.deleteMany());
   await safeDelete('assignments', () => prisma.assignment.deleteMany());
@@ -203,6 +209,39 @@ async function seedCoreStructure(): Promise<CoreSeed> {
       },
     }),
   ]);
+
+  await prisma.chatChannel.createMany({
+    data: [
+      {
+        key: `staff:${school.id}`,
+        type: 'staff',
+        school_id: school.id,
+        class_id: null,
+        title: 'Ուսուցիչների ալիք',
+        created_at: NOW,
+        updated_at: NOW,
+      },
+      {
+        key: `class:${classA.id}`,
+        type: 'class',
+        school_id: school.id,
+        class_id: classA.id,
+        title: `Դասարան ${classA.name}`,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+      {
+        key: `class:${classB.id}`,
+        type: 'class',
+        school_id: school.id,
+        class_id: classB.id,
+        title: `Դասարան ${classB.name}`,
+        created_at: NOW,
+        updated_at: NOW,
+      },
+    ],
+    skipDuplicates: true,
+  });
 
   return {
     schoolId: school.id,

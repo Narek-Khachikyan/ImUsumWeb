@@ -68,6 +68,20 @@ const navItems: NavItem[] = [
       ),
    },
    {
+      name: 'Չատ',
+      path: '/dashboard/chat',
+      icon: (
+         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+               strokeLinecap="round"
+               strokeLinejoin="round"
+               strokeWidth={2}
+               d="M8 10h8m-8 4h5m7 5l-3.9-1.95A2 2 0 0016.2 17H7a2 2 0 01-2-2V7a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-.5 1.32z"
+            />
+         </svg>
+      ),
+   },
+   {
       name: 'Գնահատականներ',
       path: '/dashboard/grades',
       icon: (

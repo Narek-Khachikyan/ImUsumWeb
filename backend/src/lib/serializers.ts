@@ -2,6 +2,8 @@ import type {
   Assignment,
   AssignmentSubmission,
   BlogPost,
+  ChatChannel,
+  ChatMessage,
   Grade,
   Offer,
   Purchase,
@@ -224,6 +226,59 @@ export function serializeOfferListItem(offer: Offer) {
     category: offer.category,
     stock_quantity: offer.stock_quantity,
     is_available: offer.is_active && (offer.stock_quantity === null || offer.stock_quantity > 0),
+  };
+}
+
+type ChatMessageSender = Pick<User, 'id' | 'first_name' | 'last_name' | 'role' | 'avatar_url'>;
+
+function serializeChatSender(sender: ChatMessageSender) {
+  return {
+    id: sender.id,
+    first_name: sender.first_name,
+    last_name: sender.last_name,
+    role: sender.role,
+    avatar_url: sender.avatar_url,
+  };
+}
+
+export function serializeChatMessage(message: ChatMessage, sender?: ChatMessageSender) {
+  return {
+    id: message.id,
+    channel_id: message.channel_id,
+    sender_user_id: message.sender_user_id,
+    body: message.body,
+    created_at: message.created_at.toISOString(),
+    edited_at: message.edited_at ? message.edited_at.toISOString() : null,
+    deleted_at: message.deleted_at ? message.deleted_at.toISOString() : null,
+    is_deleted: message.deleted_at !== null,
+    sender: sender ? serializeChatSender(sender) : null,
+  };
+}
+
+export function serializeChatChannelListItem(
+  channel: ChatChannel,
+  payload: {
+    unreadCount: number;
+    lastMessage?: {
+      message: ChatMessage;
+      sender: ChatMessageSender;
+    } | null;
+  }
+) {
+  return {
+    id: channel.id,
+    key: channel.key,
+    type: channel.type,
+    school_id: channel.school_id,
+    class_id: channel.class_id,
+    title: channel.title,
+    last_message_id: channel.last_message_id,
+    last_message_at: channel.last_message_at ? channel.last_message_at.toISOString() : null,
+    unread_count: payload.unreadCount,
+    last_message:
+      payload.lastMessage && payload.lastMessage.message
+        ? serializeChatMessage(payload.lastMessage.message, payload.lastMessage.sender)
+        : null,
   };
 }
 

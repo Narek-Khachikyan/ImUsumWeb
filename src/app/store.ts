@@ -6,6 +6,7 @@ import assignmentReducer from './slices/assignmentSlice';
 import gradeReducer from './slices/gradeSlice';
 import offersReducer from './slices/offersSlice';
 import testReducer from './slices/testSlice';
+import chatReducer from './slices/chatSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     grade: gradeReducer,
     offers: offersReducer,
     test: testReducer,
+    chat: chatReducer,
   },
 });
 

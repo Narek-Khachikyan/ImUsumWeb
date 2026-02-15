@@ -9,6 +9,19 @@ import { ApiError } from './lib/errors.js';
 import authPlugin from './plugins/auth.js';
 import v1Routes from './routes/v1/index.js';
 
+function isDatabaseUnavailableError(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientInitializationError) {
+    const prismaError = error as Prisma.PrismaClientInitializationError & {
+      errorCode?: string;
+      code?: string;
+    };
+    return (prismaError.errorCode ?? prismaError.code) === 'P1001';
+  }
+
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("Can't reach database server") || message.includes('P1001');
+}
+
 export function buildApp() {
   const app = Fastify({
     logger: true,
@@ -52,6 +65,14 @@ export function buildApp() {
 
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return reply.status(409).send({ detail: 'Resource already exists' });
+    }
+
+    if (isDatabaseUnavailableError(error)) {
+      const detail =
+        env.NODE_ENV === 'development'
+          ? 'Database unavailable. Start PostgreSQL on localhost:5432 (or run: cd backend && docker-compose up -d db).'
+          : 'Database unavailable.';
+      return reply.status(503).send({ detail });
     }
 
     if (normalizedError.validation) {

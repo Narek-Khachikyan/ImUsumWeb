@@ -6,3 +6,4 @@ export * from './assignmentService';
 export * from './gradeService';
 export * from './userService';
 export * from './testService';
+export * from './chatService';

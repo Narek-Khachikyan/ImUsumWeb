@@ -23,17 +23,29 @@ cp .env.example .env
 # or edit existing .env
 ```
 
-3. **Generate Prisma client:**
+3. **Start PostgreSQL (pick one):**
+```bash
+# Docker (recommended)
+docker-compose up -d db
+```
+Or run PostgreSQL locally and ensure it is reachable at `localhost:5432` (matches `.env.example`).
+
+4. **Generate Prisma client:**
 ```bash
 npm run prisma:generate
 ```
 
-4. **(Optional) Pull schema from existing DB (introspection-first):**
+5. **(Optional) Create schema + seed deterministic data:**
+```bash
+npm run db:reset:seed
+```
+
+6. **(Optional) Pull schema from existing DB (introspection-first):**
 ```bash
 npm run prisma:pull
 ```
 
-5. **Start API in dev mode:**
+7. **Start API in dev mode:**
 ```bash
 npm run dev
 ```
@@ -124,6 +136,7 @@ Implemented with parity to previous FastAPI backend:
 - Users: `/api/v1/users/*`
 - Blogs: `/api/v1/blogs/*`
 - Schedules: `/api/v1/schedules/*`
+- Chat: `/api/v1/chat/*`
 - Assignments: `/api/v1/assignments/*`
 - Grades: `/api/v1/grades/*`
 - Offers: `/api/v1/offers/*`

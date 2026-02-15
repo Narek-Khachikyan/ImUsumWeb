@@ -11,6 +11,8 @@
     "test:watch": "vitest",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "type-check": "tsc --noEmit",
+    "db:up": "docker-compose up -d db",
+    "db:down": "docker-compose down",
     "prisma:generate": "prisma generate",
     "prisma:pull": "prisma db pull",
     "prisma:seed": "prisma db seed",

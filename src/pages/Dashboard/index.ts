@@ -6,3 +6,4 @@ export { default as TestsPage } from './TestsPage';
 export { default as GradesPage } from './GradesPage';
 export { default as ProfilePage } from './ProfilePage';
 export { default as UsersPage } from './UsersPage';
+export { default as ChatPage } from './ChatPage';
