@@ -83,8 +83,8 @@ start_service() {
   echo "[OK] Started $name (PID $pid), logs -> $log_file"
 }
 
-start_service "backend" "cd '$ROOT_DIR/backend' && PORT=$BACKEND_PORT npm run dev"
-start_service "frontend" "cd '$ROOT_DIR' && npm run dev -- --host 0.0.0.0 --port $FRONTEND_PORT"
+start_service "backend" "cd '$ROOT_DIR/backend' && PORT=$BACKEND_PORT exec node --import tsx src/main.ts"
+start_service "frontend" "cd '$ROOT_DIR' && exec node ./node_modules/vite/bin/vite.js --host 0.0.0.0 --port $FRONTEND_PORT"
 
 wait_http() {
   local url="$1"

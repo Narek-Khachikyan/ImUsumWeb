@@ -20,6 +20,7 @@
 - `../docs/knowledge/runbooks.md`
 - `../docs/knowledge/troubleshooting.md`
 - `../docs/knowledge/feedback-loop.md`
+- `../docs/exec-plans/index.md`
 - `../PLANS.md`
 
 ## Commands

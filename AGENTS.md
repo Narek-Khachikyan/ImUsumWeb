@@ -19,6 +19,7 @@
 - `docs/knowledge/runbooks.md`
 - `docs/knowledge/troubleshooting.md`
 - `docs/knowledge/feedback-loop.md`
+- `docs/exec-plans/index.md`
 - `PLANS.md`
 
 ## Harness Commands
@@ -26,15 +27,19 @@ Run from repo root unless stated otherwise.
 - `npm run harness:doctor`
 - `npm run harness:up`
 - `npm run harness:smoke`
+- `npm run harness:sla`
+- `npm run harness:e2e`
 - `npm run harness:logs`
 - `npm run harness:down`
 
 ## Quality Gates
 - `npm run check:all`
 - `cd backend && npm run check:guardrails && npm run test`
+- `npm run check:harness`
 
 ## Execution Rules
 - Prefer alias imports (`@/...`) over deep relative imports in frontend.
 - Keep backend route registration in `backend/src/routes/v1`.
 - Keep backend business logic in `backend/src/services`.
 - Document non-trivial architectural decisions in `PLANS.md` before implementation.
+- Track non-trivial implementation plans under `docs/exec-plans/active` and move them to `docs/exec-plans/completed` after validation.

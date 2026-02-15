@@ -24,3 +24,15 @@
 ## Smoke Test Failures
 - Ensure frontend and backend are running (`npm run harness:up`).
 - Inspect `.harness/logs/*.log` and Grafana Loki explorer.
+
+## SLA Check Failures
+- Run `npm run harness:sla` to isolate latency/error failures.
+- Tune thresholds only when justified:
+  - `SLA_SAMPLE_SIZE`
+  - `SLA_MAX_P95_MS`
+  - `SLA_MAX_ERROR_RATE_PERCENT`
+  - `SLA_TARGET_URL`
+
+## E2E Smoke Failures
+- If browser is missing, run `npx playwright install chromium`.
+- Re-run `npm run harness:e2e` after confirming `harness:up` is healthy.

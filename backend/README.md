@@ -46,6 +46,8 @@ Use unified harness commands from the root workspace:
 npm run harness:doctor
 npm run harness:up
 npm run harness:smoke
+npm run harness:sla
+npm run harness:e2e
 ```
 
 This starts:

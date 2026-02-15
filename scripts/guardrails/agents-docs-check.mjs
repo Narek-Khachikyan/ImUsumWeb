@@ -15,11 +15,15 @@ const checks = [
       'docs/knowledge/runbooks.md',
       'docs/knowledge/troubleshooting.md',
       'docs/knowledge/feedback-loop.md',
+      'docs/exec-plans/index.md',
       'PLANS.md',
       'npm run harness:doctor',
       'npm run harness:up',
       'npm run harness:smoke',
-      'npm run harness:down'
+      'npm run harness:sla',
+      'npm run harness:e2e',
+      'npm run harness:down',
+      'npm run check:harness'
     ]
   },
   {
@@ -30,6 +34,7 @@ const checks = [
       '../docs/knowledge/runbooks.md',
       '../docs/knowledge/troubleshooting.md',
       '../docs/knowledge/feedback-loop.md',
+      '../docs/exec-plans/index.md',
       '../PLANS.md'
     ]
   }

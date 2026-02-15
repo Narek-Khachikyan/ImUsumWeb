@@ -18,9 +18,11 @@
     "harness:up": "bash scripts/harness/up.sh",
     "harness:down": "bash scripts/harness/down.sh",
     "harness:smoke": "bash scripts/harness/smoke.sh",
+    "harness:sla": "bash scripts/harness/sla.sh",
+    "harness:e2e": "bash scripts/harness/e2e.sh",
     "harness:logs": "bash scripts/harness/logs.sh",
     "check:guardrails": "node scripts/guardrails/frontend-structure.mjs && node scripts/guardrails/backend-structure.mjs && node scripts/guardrails/agents-docs-check.mjs",
-    "check:harness": "npm run harness:doctor && npm run harness:up && npm run harness:smoke && npm run harness:down",
+    "check:harness": "bash scripts/harness/check.sh",
     "check:all": "npm run type-check && npm run test -- --run src/test && npm run check:guardrails && (cd backend && npm run check:guardrails)"
   },
   "dependencies": {
@@ -38,6 +40,7 @@
     "swiper": "^11.0.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
