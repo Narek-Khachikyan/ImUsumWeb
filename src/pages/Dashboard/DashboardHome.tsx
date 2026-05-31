@@ -30,7 +30,7 @@ function TeacherDirectorDashboard() {
    const todaySchedule = mySchedule.filter((s) => {
       const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const today = days[new Date().getDay()];
-      return s.day_of_week === today;
+      return s.day_of_week.toLowerCase() === today;
    });
 
    const upcomingAssignments = myAssignments

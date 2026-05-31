@@ -23,7 +23,7 @@
     "harness:logs": "bash scripts/harness/logs.sh",
     "check:guardrails": "node scripts/guardrails/frontend-structure.mjs && node scripts/guardrails/backend-structure.mjs && node scripts/guardrails/agents-docs-check.mjs",
     "check:harness": "bash scripts/harness/check.sh",
-    "check:all": "npm run type-check && npm run test -- --run src/test && npm run check:guardrails && (cd backend && npm run check:guardrails)"
+    "check:all": "npm run type-check && npm run test -- --run src/test --maxWorkers=1 && npm run check:guardrails && (cd backend && npm run check:guardrails)"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

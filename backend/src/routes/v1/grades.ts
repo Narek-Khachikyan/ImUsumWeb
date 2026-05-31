@@ -33,12 +33,23 @@ function assertTenScaleMaxValue(value: unknown): void {
 const gradesRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('', { preHandler: [fastify.authenticate] }, async (request) => {
     const query = request.query as { student_id?: string | number; subject_id?: string | number };
+    const currentUser = request.currentUser!;
+    const where: Record<string, unknown> = {
+      ...(query.subject_id ? { subject_id: Number(query.subject_id) } : {}),
+    };
+
+    if (currentUser.role === 'student') {
+      const student = await prisma.studentProfile.findUnique({ where: { user_id: currentUser.id } });
+      if (!student) {
+        badRequest('Student profile not found');
+      }
+      where.student_id = student.id;
+    } else if (query.student_id) {
+      where.student_id = Number(query.student_id);
+    }
 
     const grades = await prisma.grade.findMany({
-      where: {
-        ...(query.student_id ? { student_id: Number(query.student_id) } : {}),
-        ...(query.subject_id ? { subject_id: Number(query.subject_id) } : {}),
-      },
+      where,
       orderBy: { date: 'desc' },
     });
 

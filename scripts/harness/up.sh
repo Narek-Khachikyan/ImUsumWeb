@@ -44,10 +44,12 @@ run_backend_migrations() {
     break
   done
 
-  echo "[WARN] Prisma migrate deploy did not complete. Falling back to schema sync (prisma db push)."
-  if (cd "$ROOT_DIR/backend" && npx prisma db push --accept-data-loss --skip-generate >/dev/null 2>&1); then
-    echo "[OK] Backend schema synced via prisma db push"
-    return
+  if [[ "${HARNESS_ALLOW_DB_PUSH_FALLBACK:-0}" == "1" ]]; then
+    echo "[WARN] Prisma migrate deploy did not complete. Falling back to schema sync (prisma db push)."
+    if (cd "$ROOT_DIR/backend" && npx prisma db push --accept-data-loss --skip-generate >/dev/null 2>&1); then
+      echo "[OK] Backend schema synced via prisma db push"
+      return
+    fi
   fi
 
   if [[ -n "$migrate_output" ]]; then

@@ -1,3 +1,4 @@
+import type { User } from '@prisma/client';
 import type { FastifyPluginAsync } from 'fastify';
 
 import { DIRECTOR_PLUS_ROLES, TEACHER_PLUS_ROLES } from '../../lib/auth.js';
@@ -24,6 +25,40 @@ function parseIsActiveQuery(value: unknown): boolean | undefined {
     return false;
   }
   badRequest('is_active must be true or false');
+}
+
+async function resolveTeacherProfileId(userId: number): Promise<number | null> {
+  const teacher = await prisma.teacherProfile.findUnique({ where: { user_id: userId } });
+  return teacher?.id ?? null;
+}
+
+async function assertCanManageStudentEligibility(user: User, studentClassId: number | null): Promise<void> {
+  if (user.role === 'director' || user.role === 'admin') {
+    return;
+  }
+
+  if (user.role !== 'teacher') {
+    forbidden('Not authorized to manage job eligibility');
+  }
+
+  if (!studentClassId) {
+    forbidden('Student class is required');
+  }
+
+  const teacherId = await resolveTeacherProfileId(user.id);
+  if (!teacherId) {
+    forbidden('Teacher profile not found');
+  }
+
+  const hasSchedule = await prisma.schedule.count({
+    where: {
+      class_id: studentClassId,
+      teacher_id: teacherId,
+    },
+  });
+  if (hasSchedule === 0) {
+    forbidden('Not authorized to manage this student');
+  }
 }
 
 const jobsRoutes: FastifyPluginAsync = async (fastify) => {
@@ -259,6 +294,8 @@ const jobsRoutes: FastifyPluginAsync = async (fastify) => {
       if (typeof body.eligible !== 'boolean') {
         badRequest('eligible must be boolean');
       }
+
+      await assertCanManageStudentEligibility(request.currentUser!, student.class_id);
 
       const override = await prisma.jobEligibilityOverride.upsert({
         where: { student_id: studentId },

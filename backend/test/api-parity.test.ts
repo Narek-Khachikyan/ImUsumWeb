@@ -24,6 +24,9 @@ const { mockPrisma, requestPasswordReset, resetPasswordWithToken } = vi.hoisted(
       findUnique: vi.fn(),
       create: vi.fn(),
     },
+    schedule: {
+      count: vi.fn(),
+    },
     passwordResetToken: {
       updateMany: vi.fn(),
       create: vi.fn(),
@@ -114,6 +117,10 @@ const { mockPrisma, requestPasswordReset, resetPasswordWithToken } = vi.hoisted(
     },
     purchase: {
       findUnique: vi.fn(),
+      update: vi.fn(),
+    },
+    jobEligibilityOverride: {
+      upsert: vi.fn(),
     },
     $queryRaw: vi.fn(),
     $transaction: vi.fn(),
@@ -304,6 +311,7 @@ describe('API parity', () => {
     mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 1, user_id: 1, class_id: 1, bonus_points: 100 });
     mockPrisma.studentProfile.count.mockResolvedValue(20);
     mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 1, user_id: 1 });
+    mockPrisma.schedule.count.mockResolvedValue(1);
 
     mockPrisma.blogPost.findMany.mockResolvedValue([]);
     mockPrisma.learningMaterial.findMany.mockResolvedValue([]);
@@ -341,6 +349,15 @@ describe('API parity', () => {
     mockPrisma.subject.findUnique.mockResolvedValue({ id: 2, name: 'Mathematics' });
 
     mockPrisma.$queryRaw.mockResolvedValue(undefined);
+    mockPrisma.jobEligibilityOverride.upsert.mockResolvedValue({
+      id: 1,
+      student_id: 10,
+      eligible: true,
+      reason: null,
+      set_by_user_id: 1,
+      created_at: now,
+      updated_at: now,
+    });
   });
 
   afterEach(() => {
@@ -1133,6 +1150,30 @@ describe('API parity', () => {
     await app.close();
   });
 
+  it('student grades list ignores foreign student_id filter and returns only own grades', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
+    mockPrisma.grade.findMany.mockResolvedValue([buildGrade({ id: 77, student_id: 10 })]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/grades?student_id=999&subject_id=9',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockPrisma.grade.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { student_id: 10, subject_id: 9 },
+      })
+    );
+    await app.close();
+  });
+
   it('teacher grade update enforces 2..10 and max_value=10', async () => {
     const app = buildApp();
     await app.ready();
@@ -1453,6 +1494,56 @@ describe('API parity', () => {
 
     expect(response.statusCode).toBe(400);
     expect(response.json().detail).toBe('Test submission deadline has passed');
+    await app.close();
+  });
+
+  it('teacher assignment list is scoped to own teacher profile', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
+    mockPrisma.assignment.findMany.mockResolvedValue([buildAssignment({ id: 7, teacher_id: 11 })]);
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/assignments',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(mockPrisma.assignment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { teacher_id: 11 },
+      })
+    );
+    await app.close();
+  });
+
+  it('teacher cannot create assignment for a class they do not teach', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
+    mockPrisma.schedule.count.mockResolvedValue(0);
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/assignments',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        title: 'Unauthorized assignment',
+        subject_id: 2,
+        class_id: 99,
+        due_date: '2099-02-20T10:00:00.000Z',
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().detail).toBe('Not authorized for this class');
     await app.close();
   });
 
@@ -2010,7 +2101,8 @@ describe('API parity', () => {
 
     const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
     mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
-    mockPrisma.purchase.findUnique.mockResolvedValue({ id: 11, status: 'redeemed' });
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
+    mockPrisma.purchase.findUnique.mockResolvedValue({ id: 11, student_id: 10, status: 'redeemed' });
 
     const response = await app.inject({
       method: 'POST',
@@ -2020,6 +2112,50 @@ describe('API parity', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual({ success: false, message: 'Already redeemed' });
+    await app.close();
+  });
+
+  it('student cannot redeem another student purchase', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'student' }));
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 1, class_id: 3 });
+    mockPrisma.purchase.findUnique.mockResolvedValue({ id: 11, student_id: 999, status: 'pending' });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/purchases/11/redeem',
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json().detail).toBe('Purchase not found');
+    await app.close();
+  });
+
+  it('teacher cannot override job eligibility for students outside taught classes', async () => {
+    const app = buildApp();
+    await app.ready();
+
+    const token = app.jwt.sign({ sub: '1', type: 'access', ver: 0 }, { expiresIn: '30m' });
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ role: 'teacher' }));
+    mockPrisma.teacherProfile.findUnique.mockResolvedValue({ id: 11, user_id: 1 });
+    mockPrisma.studentProfile.findUnique.mockResolvedValue({ id: 10, user_id: 55, class_id: 99 });
+    mockPrisma.schedule.count.mockResolvedValue(0);
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: '/api/v1/jobs/eligibility/10',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        eligible: true,
+      },
+    });
+
+    expect(response.statusCode).toBe(403);
+    expect(response.json().detail).toBe('Not authorized to manage this student');
     await app.close();
   });
 });

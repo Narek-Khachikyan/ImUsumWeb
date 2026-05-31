@@ -278,6 +278,7 @@ export default function TestsPage() {
     setTakeTestError(null);
     setAnswersByQuestionId({});
     setActiveTakeTest(test);
+    dispatch(clearCurrentTest());
 
     try {
       await dispatch(fetchTestById(test.id)).unwrap();
@@ -290,6 +291,7 @@ export default function TestsPage() {
     setActiveTakeTest(null);
     setAnswersByQuestionId({});
     setTakeTestError(null);
+    dispatch(clearCurrentTest());
   };
 
   const openAttemptModal = async (test: TestListItem) => {
@@ -587,7 +589,7 @@ export default function TestsPage() {
   const handleSubmitTest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!activeTakeTest || !currentTest) {
+    if (!activeTakeTest || !currentTest || currentTest.id !== activeTakeTest.id) {
       return;
     }
 
@@ -1214,42 +1216,52 @@ export default function TestsPage() {
             <form onSubmit={handleSubmitTest} className="space-y-5 px-6 py-5">
               {takeTestError && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{takeTestError}</div>}
 
-              {currentTest?.questions.map((question, index) => (
-                <div key={question.id} className="rounded-xl border border-gray-200 p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-medium text-gray-900">{index + 1}. {question.question_text}</p>
-                    <span className="text-sm text-blue-main font-medium">{question.points} միավոր</span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {question.options
-                      .slice()
-                      .sort((left, right) => left.order_index - right.order_index)
-                      .map((option) => (
-                        <label key={option.id} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 cursor-pointer hover:bg-gray-50">
-                          <input
-                            type="radio"
-                            name={`question_${question.id}`}
-                            checked={answersByQuestionId[question.id] === option.id}
-                            onChange={() =>
-                              setAnswersByQuestionId((state) => ({
-                                ...state,
-                                [question.id]: option.id,
-                              }))
-                            }
-                          />
-                          <span className="text-gray-800">{option.option_text}</span>
-                        </label>
-                      ))}
-                  </div>
+              {currentTest?.id !== activeTakeTest.id ? (
+                <div className="rounded-xl border border-gray-200 p-6 text-sm text-gray-500">
+                  Թեստի հարցերը բեռնվում են...
                 </div>
-              ))}
+              ) : (
+                currentTest.questions.map((question, index) => (
+                  <div key={question.id} className="rounded-xl border border-gray-200 p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium text-gray-900">{index + 1}. {question.question_text}</p>
+                      <span className="text-sm text-blue-main font-medium">{question.points} միավոր</span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {question.options
+                        .slice()
+                        .sort((left, right) => left.order_index - right.order_index)
+                        .map((option) => (
+                          <label key={option.id} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 cursor-pointer hover:bg-gray-50">
+                            <input
+                              type="radio"
+                              name={`question_${question.id}`}
+                              checked={answersByQuestionId[question.id] === option.id}
+                              onChange={() =>
+                                setAnswersByQuestionId((state) => ({
+                                  ...state,
+                                  [question.id]: option.id,
+                                }))
+                              }
+                            />
+                            <span className="text-gray-800">{option.option_text}</span>
+                          </label>
+                        ))}
+                    </div>
+                  </div>
+                ))
+              )}
 
               <div className="flex justify-end gap-3 border-t pt-4">
                 <button type="button" onClick={closeTakeTestModal} className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50">
                   Փակել
                 </button>
-                <button type="submit" disabled={isSubmittingTest} className="px-4 py-2 rounded-lg bg-blue-main text-white hover:bg-blue-dark disabled:opacity-50">
+                <button
+                  type="submit"
+                  disabled={isSubmittingTest || currentTest?.id !== activeTakeTest.id}
+                  className="px-4 py-2 rounded-lg bg-blue-main text-white hover:bg-blue-dark disabled:opacity-50"
+                >
                   {isSubmittingTest ? 'Հանձնվում է...' : 'Հանձնել թեստը'}
                 </button>
               </div>

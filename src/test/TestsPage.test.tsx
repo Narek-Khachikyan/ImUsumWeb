@@ -72,7 +72,7 @@ function buildListItem(overrides: Partial<TestListItem> = {}): TestListItem {
     subject_id: 2,
     class_id: 1,
     teacher_id: 1,
-    due_date: '2026-02-20T10:00:00.000Z',
+    due_date: '2099-02-20T10:00:00.000Z',
     is_published: true,
     created_at: '2026-02-07T10:00:00.000Z',
     updated_at: '2026-02-07T10:00:00.000Z',
@@ -92,7 +92,7 @@ function buildDetail(overrides: Partial<TestDetail> = {}): TestDetail {
     subject_id: 2,
     class_id: 1,
     teacher_id: 1,
-    due_date: '2026-02-20T10:00:00.000Z',
+    due_date: '2099-02-20T10:00:00.000Z',
     is_published: true,
     created_at: '2026-02-07T10:00:00.000Z',
     updated_at: '2026-02-07T10:00:00.000Z',
@@ -161,6 +161,25 @@ describe('TestsPage', () => {
         },
       });
     });
+  });
+
+  it('student does not see stale questions when opening a different test', async () => {
+    const firstTest = buildListItem({ id: 1, title: 'First Test' });
+    const secondTest = buildListItem({ id: 2, title: 'Second Test' });
+    setState({
+      myTests: [firstTest, secondTest],
+      currentTest: buildDetail({ id: 1, title: 'First Test' }),
+    });
+    mockUseAuth.mockReturnValue({ user: { id: 5, role: 'student' } });
+
+    const user = userEvent.setup();
+    render(<TestsPage />);
+
+    await user.click(screen.getAllByRole('button', { name: 'Անցնել թեստը' })[1]!);
+
+    expect(screen.getAllByText('Second Test').length).toBeGreaterThan(0);
+    expect(screen.getByText('Թեստի հարցերը բեռնվում են...')).toBeInTheDocument();
+    expect(screen.queryByText('2 + 2 = ?')).not.toBeInTheDocument();
   });
 
   it('student sees attempt score in 10-point format', () => {

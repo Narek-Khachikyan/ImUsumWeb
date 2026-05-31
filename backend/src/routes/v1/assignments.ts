@@ -369,6 +369,14 @@ const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
         : {}),
     };
 
+    if (currentUser.role === 'teacher') {
+      const teacher = await prisma.teacherProfile.findUnique({ where: { user_id: currentUser.id } });
+      if (!teacher) {
+        return [];
+      }
+      where.teacher_id = teacher.id;
+    }
+
     const assignments = await prisma.assignment.findMany({ where, orderBy: { due_date: 'desc' } });
     return serializeAssignmentsWithTargets(assignments);
   });
@@ -526,6 +534,7 @@ const assignmentsRoutes: FastifyPluginAsync = async (fastify) => {
     };
 
     const currentUser = request.currentUser!;
+    await assertTeacherHasClassAccess(currentUser, body.class_id);
     const teacher = await prisma.teacherProfile.findUnique({ where: { user_id: currentUser.id } });
     if (!teacher) {
       badRequest('Teacher profile not found');

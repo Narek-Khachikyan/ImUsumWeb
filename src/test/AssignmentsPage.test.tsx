@@ -60,7 +60,7 @@ function buildAssignment(overrides: Partial<Assignment> = {}): Assignment {
     subject_id: 3,
     class_id: 7,
     teacher_id: 11,
-    due_date: '2026-02-20T10:00:00.000Z',
+    due_date: '2099-02-20T10:00:00.000Z',
     max_points: 10,
     is_published: true,
     created_at: '2026-02-07T10:00:00.000Z',

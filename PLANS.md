@@ -191,3 +191,74 @@
 - Jobs module supports eligibility checks, overrides, postings, and applications with role-based permissions.
 - Assignments support class/group/student targeting and preserve old records as class-targeted.
 - Student home announcements/discounts are fetched from backend APIs, with robust empty/error states.
+
+## 2026-03-05: Review Findings Hardening
+
+### Summary
+- Close the review findings uncovered in project-wide audit, with priority on authorization gaps, validation blind spots, and frontend state/session regressions.
+
+### Scope
+- In scope:
+- Tighten backend authorization for grades, purchases, assignments, and jobs.
+- Make harness migration failures fail loudly instead of silently falling back to schema push in normal runs.
+- Fix frontend session refresh handling, test-taking state reuse, and dashboard schedule day normalization.
+- Add targeted regression tests for the fixed paths.
+- Out of scope:
+- Large redesigns of role model or auth architecture.
+- New product features unrelated to the review findings.
+
+### Key Decisions
+- Treat migration failure as a hard failure by default; any schema-sync fallback must be explicitly opt-in for local recovery.
+- Keep assignment/job authorization consistent with existing class-access patterns instead of introducing a new permission model.
+- Use token refresh on 401 before forcing logout so the existing refresh-token contract is actually honored.
+
+### Validation Plan
+- `npm run check:all`
+- `cd backend && npm run test`
+
+### Acceptance Criteria
+- Reviewed authorization gaps are closed with regression coverage.
+- Harness no longer masks broken migrations in normal validation runs.
+- Expired access tokens refresh without forcing logout when refresh token is valid.
+- Test-taking and dashboard views no longer use stale or mismatched state.
+
+### Validation Outcome
+- Passed on 2026-03-05:
+- `npm run check:all`
+- `cd backend && npm run test`
+
+## 2026-05-31: Public OSS Readiness
+
+### Summary
+- Prepare the repository for public GitHub users with standard OSS files, a contributor-oriented README, and GitHub metadata.
+
+### Scope
+- In scope:
+- Add `LICENSE`, `CONTRIBUTING.md`, `SECURITY.md`, and `CODE_OF_CONDUCT.md`.
+- Rewrite `README.md` for public users and contributors.
+- Record GitHub presentation settings: description, topics, and Issues availability.
+- Out of scope:
+- Product feature changes.
+- Deployment automation changes.
+- New screenshots or demo recordings beyond documenting how to capture them from the harness.
+
+### Key Decisions
+- Use MIT licensing for low-friction contribution and reuse.
+- Keep setup instructions harness-first because the app depends on frontend, backend, PostgreSQL, and observability services.
+- Keep AI/Codex positioning maintenance-focused: planning, regression coverage, harness checks, and source-backed documentation rather than autonomous production changes.
+
+### Validation Plan
+- `npm run check:all`
+- `cd backend && npm run check:guardrails && npm run test`
+
+### Acceptance Criteria
+- Public users can understand the product, audience, features, architecture, and local setup from `README.md`.
+- Contributors can find policy, security, conduct, and validation guidance at the repo root.
+- GitHub repository description, topics, and Issues settings are configured.
+
+### Validation Outcome
+- Passed on 2026-05-31:
+- `PATH="/opt/homebrew/opt/node@22/bin:$PATH" npm run check:all`
+- `cd backend && PATH="/opt/homebrew/opt/node@22/bin:$PATH" npm run check:guardrails && PATH="/opt/homebrew/opt/node@22/bin:$PATH" npm run test`
+- Blocked on 2026-05-31:
+- `PATH="/opt/homebrew/opt/node@22/bin:$PATH" npm run check:harness` stopped at `harness:doctor` because Docker Desktop was not running.

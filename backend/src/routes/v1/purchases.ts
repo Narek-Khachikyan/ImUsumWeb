@@ -63,11 +63,21 @@ const purchasesRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   fastify.post('/:purchase_id/redeem', { preHandler: [fastify.authenticate] }, async (request) => {
+    const currentUser = request.currentUser!;
     const params = request.params as { purchase_id: string };
     const purchaseId = Number(params.purchase_id);
 
+    if (currentUser.role !== 'student') {
+      forbidden('Only students can redeem purchases');
+    }
+
+    const student = await prisma.studentProfile.findUnique({ where: { user_id: currentUser.id } });
+    if (!student) {
+      notFound('Student profile not found');
+    }
+
     const purchase = await prisma.purchase.findUnique({ where: { id: purchaseId } });
-    if (!purchase) {
+    if (!purchase || purchase.student_id !== student.id) {
       notFound('Purchase not found');
     }
 
