@@ -68,6 +68,7 @@ const offersRoutes: FastifyPluginAsync = async (fastify) => {
         brand_name: body.brand_name,
         category: body.category ?? 'other',
         stock_quantity: body.stock_quantity ?? null,
+        created_at: new Date(),
       },
     });
 
@@ -186,6 +187,7 @@ const offersRoutes: FastifyPluginAsync = async (fastify) => {
             points_spent: offer.price,
             qr_code: qrCode,
             status: 'pending',
+            created_at: new Date(),
           },
         });
 

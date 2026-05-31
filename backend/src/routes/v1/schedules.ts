@@ -101,6 +101,7 @@ const schedulesRoutes: FastifyPluginAsync = async (fastify) => {
         room: body.room ?? null,
         effective_from: parseDateOnly(body.effective_from),
         effective_to: body.effective_to ? parseDateOnly(body.effective_to) : null,
+        created_at: new Date(),
       },
     });
 

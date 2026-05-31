@@ -155,6 +155,7 @@ const gradesRoutes: FastifyPluginAsync = async (fastify) => {
         reference_id: body.reference_id ?? null,
         date: parseDateOnly(body.date),
         comment: body.comment ?? null,
+        created_at: new Date(),
       },
     });
 
