@@ -55,6 +55,7 @@ const blogsRoutes: FastifyPluginAsync = async (fastify) => {
         letter: body.letter,
         date: parseDateOnly(body.date),
         hot: body.hot ?? false,
+        created_at: new Date(),
       },
     });
 
