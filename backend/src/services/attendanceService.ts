@@ -1,4 +1,4 @@
-import { DayOfWeek, type AttendanceRecord, type AttendanceStatus, type User } from '@prisma/client';
+import type { AttendanceRecord, AttendanceStatus, DayOfWeek, User } from '@prisma/client';
 
 import { env } from '../config/env.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
@@ -24,13 +24,13 @@ type AttendanceDay = {
 };
 
 const DAY_BY_INDEX: DayOfWeek[] = [
-  DayOfWeek.SUNDAY,
-  DayOfWeek.MONDAY,
-  DayOfWeek.TUESDAY,
-  DayOfWeek.WEDNESDAY,
-  DayOfWeek.THURSDAY,
-  DayOfWeek.FRIDAY,
-  DayOfWeek.SATURDAY,
+  'SUNDAY',
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
 ];
 
 function dateOnlyUtc(value: Date): Date {

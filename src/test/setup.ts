@@ -20,6 +20,28 @@ if (!('IntersectionObserver' in globalThis)) {
    globalThis.IntersectionObserver = MockIntersectionObserver;
 }
 
+if (
+   !('localStorage' in globalThis) ||
+   typeof globalThis.localStorage?.getItem !== 'function' ||
+   typeof globalThis.localStorage?.setItem !== 'function' ||
+   typeof globalThis.localStorage?.removeItem !== 'function'
+) {
+   const storage = new Map<string, string>();
+   Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+         clear: () => storage.clear(),
+         getItem: (key: string) => storage.get(key) ?? null,
+         key: (index: number) => Array.from(storage.keys())[index] ?? null,
+         removeItem: (key: string) => storage.delete(key),
+         setItem: (key: string, value: string) => storage.set(key, String(value)),
+         get length() {
+            return storage.size;
+         },
+      },
+   });
+}
+
 vi.mock('framer-motion', async () => {
    const React = await vi.importActual<typeof import('react')>('react');
    const motionOnlyProps = new Set([

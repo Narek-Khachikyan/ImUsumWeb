@@ -262,3 +262,35 @@
 - `cd backend && PATH="/opt/homebrew/opt/node@22/bin:$PATH" npm run check:guardrails && PATH="/opt/homebrew/opt/node@22/bin:$PATH" npm run test`
 - Blocked on 2026-05-31:
 - `PATH="/opt/homebrew/opt/node@22/bin:$PATH" npm run check:harness` stopped at `harness:doctor` because Docker Desktop was not running.
+
+## 2026-05-31: CI Migration And Prisma Enum Repair
+
+### Summary
+- Restore clean-install CI by adding the missing Prisma baseline migration before the existing migration chain.
+- Remove attendance route registration dependence on runtime Prisma enum exports.
+
+### Scope
+- In scope:
+- Backend migration deployability on empty PostgreSQL databases.
+- Attendance service module-load stability in freshly generated Prisma client environments.
+- Focused CI regression tests for both failure modes.
+- Out of scope:
+- Product feature changes.
+- Frontend behavior changes.
+
+### Key Decisions
+- Add an idempotent baseline migration generated from the current Prisma schema because the repository only had follow-up migrations that assumed legacy tables already existed.
+- Keep `DayOfWeek` as a TypeScript-only Prisma type and use string enum values at runtime, matching the rest of the backend's Prisma enum usage.
+
+### Validation Plan
+- `npm run test --prefix backend`
+- `npm run check:all`
+- `cd backend && npm run check:guardrails && npm run test`
+- `npm run check:harness`
+
+### Validation Outcome
+- Passed on 2026-05-31:
+- `npm run check:all` — 9 frontend test files, 30 tests, all passed
+- `cd backend && npm run check:guardrails && npm run test` — 3 test files, 66 tests (incl. ci-regressions), all passed
+- Blocked on 2026-05-31:
+- `npm run check:harness` stopped at `harness:doctor` because Docker Desktop was not running.
